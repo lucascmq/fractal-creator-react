@@ -19,14 +19,15 @@ export default function AddShapePanel({ onAdd, onCancel }) {
   const MAX = 250;
   const [selected, setSelected] = useState(null);
   const [x, setX] = useState(0);
-  const [y, setY] = useState(0);  const [scale, setScale] = useState(1);
+  const [y, setY] = useState(0);
+  const [scale, setScale] = useState(4); // valor padrão alterado para 4
   const [fillOpacity, setFillOpacity] = useState(0.5);
   const clamp = (val) => Math.max(MIN, Math.min(MAX, Number(val)));
   const handleShapeSelect = (type) => {
     setSelected(type);
     setX(0);
     setY(0);
-    setScale(1);
+    setScale(4); // valor padrão ao selecionar
     setFillOpacity(0.5); // valor padrão ao selecionar
   };
 
@@ -80,6 +81,11 @@ export default function AddShapePanel({ onAdd, onCancel }) {
                     max={MAX}
                     onChange={e => setX(e.target.value)}
                     style={{ width: 60 }}
+                    onWheel={e => {
+                      const step = 1;
+                      const dir = e.deltaY < 0 ? 1 : -1;
+                      setX(prev => String(clamp(Number(prev) + dir * step)));
+                    }}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
@@ -91,6 +97,11 @@ export default function AddShapePanel({ onAdd, onCancel }) {
                     max={MAX}
                     onChange={e => setY(e.target.value)}
                     style={{ width: 60, marginLeft: 4 }}
+                    onWheel={e => {
+                      const step = 1;
+                      const dir = e.deltaY < 0 ? 1 : -1;
+                      setY(prev => String(clamp(Number(prev) + dir * step)));
+                    }}
                   />
                 </div>
               </div>
@@ -104,6 +115,11 @@ export default function AddShapePanel({ onAdd, onCancel }) {
                     step={1}
                     onChange={e => setScale(e.target.value)}
                     style={{ width: 60 }}
+                    onWheel={e => {
+                      const step = 1;
+                      const dir = e.deltaY < 0 ? 1 : -1;
+                      setScale(prev => String(Math.max(1, Number(prev) + dir * step)));
+                    }}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
@@ -116,6 +132,16 @@ export default function AddShapePanel({ onAdd, onCancel }) {
                     step={0.1}
                     onChange={e => setFillOpacity(e.target.value)}
                     style={{ width: 60, marginLeft: 4 }}
+                    onWheel={e => {
+                      const step = 0.1;
+                      const dir = e.deltaY < 0 ? 1 : -1;
+                      setFillOpacity(prev => {
+                        let next = Math.round((Number(prev) + dir * step) * 10) / 10;
+                        if (next > 1) next = 1;
+                        if (next < 0) next = 0;
+                        return String(next);
+                      });
+                    }}
                   />
                 </div>
               </div>

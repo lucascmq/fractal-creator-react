@@ -3,14 +3,14 @@ import RightPanel from './components/RightPanel';
 import FractalCanvas from './components/FractalCanvas';
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import { createGroup, deleteGroup, addChildToGroup, removeChildFromGroup, createGroupFromSelection } from './utils/GroupManager';
 
-function App() {
-  // Estados globais para linhas e formas
+function App() {  // Estados globais para linhas e formas
   const [lines, setLines] = useState([]);
   const [shapes, setShapes] = useState([]);
-  const [groups, setGroups] = useState([]); // Estado para grupos (ainda não usado)
+  const [groups, setGroups] = useState([]); // Estado para grupos
   const [selectedShapeId, setSelectedShapeId] = useState(null);
-  const [localShapes, setLocalShapes] = useState([]);
+  const [selectedElements, setSelectedElements] = useState([]); // Estado para seleção múltipla
   
   // Estado para controlar quando estamos editando e desabilitar scroll da página
   const [isEditingShape, setIsEditingShape] = useState(false);
@@ -86,7 +86,11 @@ function App() {
 
   // Funções para atualizar elementos (placeholders)
   const handleUpdateLine = (id, newParams) => {
-    setLines(prev => prev.map(line => line.id === id ? { ...line, ...newParams } : line));
+    if (newParams === null) {
+      setLines(prev => prev.filter(line => line.id !== id));
+    } else {
+      setLines(prev => prev.map(line => line.id === id ? { ...line, ...newParams } : line));
+    }
   };
   const handleUpdateShape = (id, newParams) => {
     setShapes(prev => prev.map(shape => shape.id === id ? { ...shape, ...newParams } : shape));
@@ -105,18 +109,86 @@ function App() {
     setLines([]);
     setShapes([]);
   };
-
   // Resetar a visualização (zoom, pan, etc.)
   const handleResetView = () => {
     // Implementar lógica de reset quando necessário
-    console.log('Resetando visualização');
+  };
+
+  // Funções para manipulação de grupos
+  
+  // Cria um novo grupo vazio
+  const handleCreateGroup = (options = {}) => {
+    const newGroup = createGroup(options);
+    setGroups(prev => [...prev, newGroup]);
+    return newGroup.id; // Retorna o ID do grupo criado
+  };
+  
+  // Cria um grupo a partir de elementos selecionados
+  const handleCreateGroupFromSelection = (selectedIds, options = {}) => {
+    // Obtém os elementos correspondentes aos IDs selecionados
+    const selectedShapes = shapes.filter(shape => selectedIds.includes(shape.id));
+    const selectedLines = lines.filter(line => selectedIds.includes(line.id));
+    const selectedElements = [...selectedShapes, ...selectedLines];
+    
+    if (selectedElements.length === 0) return null;
+    
+    const newGroup = createGroupFromSelection(selectedElements, options);
+    setGroups(prev => [...prev, newGroup]);
+    return newGroup.id;
+  };
+  
+  // Remove um grupo
+  const handleDeleteGroup = (groupId, orphanChildren = true) => {
+    const { groups: updatedGroups, affectedElements } = deleteGroup(groups, groupId, orphanChildren);
+    setGroups(updatedGroups);
+    return affectedElements; // Retorna os IDs dos elementos afetados
+  };
+  
+  // Adiciona elementos a um grupo
+  const handleAddToGroup = (groupId, elementIds) => {
+    setGroups(prev => addChildToGroup(prev, groupId, elementIds));
+  };
+  
+  // Remove elementos de um grupo
+  const handleRemoveFromGroup = (groupId, elementId) => {
+    setGroups(prev => removeChildFromGroup(prev, groupId, elementId));
+  };
+    // Alterna a seleção de um elemento
+  const handleToggleElementSelection = (elementId, elementType) => {
+    setSelectedElements(prev => {
+      const isSelected = prev.some(el => el.id === elementId);
+      if (isSelected) {
+        return prev.filter(el => el.id !== elementId);
+      } else {
+        return [...prev, { id: elementId, type: elementType }];
+      }
+    });
+  };
+  
+  // Limpa a seleção atual
+  const handleClearSelection = () => {
+    setSelectedElements([]);
   };
 
   // Garante que todas as shapes tenham layer ao inicializar (boa prática para retrocompatibilidade)
   useEffect(() => {
     setShapes(prev => prev.map((s, i) =>
-      s.layer === undefined ? { ...s, layer: i } : s
-    ));
+      s.layer === undefined ? { ...s, layer: i } : s    ));
+    
+    // Garante que a seleção múltipla comece vazia
+    setSelectedElements([]);
+  }, []);
+
+  // Expor handleAddLine, handleAddShape e handleAddGroup globalmente para uso no RightPanel
+  React.useEffect(() => {
+    window.handleAddLine = handleAddLine;
+    window.handleAddShape = handleAddShape;
+    window.handleAddGroup = (group) => setGroups(prev => [...prev, group]);
+    return () => {
+      window.handleAddLine = undefined;
+      window.handleAddShape = undefined;
+      window.handleAddGroup = undefined;
+    };
   }, []);
 
   return (
@@ -138,23 +210,35 @@ function App() {
           <FractalCanvas 
             lines={lines} 
             shapes={shapes}
+            groups={groups}
             settings={settings}
             onUpdateShape={handleUpdateShape}
+            onUpdateLine={handleUpdateLine} // <--- Adicionado!
             selectedShapeId={selectedShapeId}
             setSelectedShapeId={setSelectedShapeId}
             isEditingShape={isEditingShape}
             setIsEditingShape={setIsEditingShape}
+            selectedElements={selectedElements}
+            onToggleElementSelection={handleToggleElementSelection}
+            onClearSelection={handleClearSelection}
           />
         </main>
         <aside className="editor-column" tabIndex="0">
           <RightPanel
             lines={lines}
             shapes={shapes}
+            groups={groups}
             onUpdateLine={handleUpdateLine}
             onUpdateShape={handleUpdateShape}
             onDeleteLine={handleDeleteLine}
             onDeleteShape={handleDeleteShape}
             selectedShapeId={selectedShapeId}
+            selectedElements={selectedElements}
+            onToggleElementSelection={handleToggleElementSelection}
+            onCreateGroup={handleCreateGroupFromSelection}
+            onDeleteGroup={handleDeleteGroup}
+            onAddToGroup={handleAddToGroup}
+            onRemoveFromGroup={handleRemoveFromGroup}
           />
         </aside>
       </div>

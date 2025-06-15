@@ -805,3 +805,141 @@ body.editing-mode {
     8px -8px 0 0 currentColor,
     -8px 8px 0 0 currentColor;
 }
+
+/* Esconde a barra de rolagem vertical da lista de grupos, mas mantém o scroll funcional */
+.grupos-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Esconde apenas o thumb do input range com a classe hide-range-thumb */
+.hide-range-thumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 0;
+  height: 0;
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+.hide-range-thumb::-moz-range-thumb {
+  width: 0;
+  height: 0;
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+.hide-range-thumb::-ms-thumb {
+  width: 0;
+  height: 0;
+  background: transparent;
+  box-shadow: none;
+  border: none;
+}
+
+/* =================================== */
+/* CANVAS DO FRACTAL - GRID BRIGHTNESS */
+/* =================================== */
+.fractal-canvas-container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Classes para ajuste de brilho/intensidade do grid */
+.grid-brightness-0 {
+  filter: brightness(0);
+}
+
+.grid-brightness-10 {
+  filter: brightness(0.1);
+}
+
+.grid-brightness-20 {
+  filter: brightness(0.2);
+}
+
+.grid-brightness-30 {
+  filter: brightness(0.3);
+}
+
+.grid-brightness-40 {
+  filter: brightness(0.4);
+}
+
+.grid-brightness-50 {
+  filter: brightness(0.5);
+}
+
+.grid-brightness-60 {
+  filter: brightness(0.6);
+}
+
+.grid-brightness-70 {
+  filter: brightness(0.7);
+}
+
+.grid-brightness-80 {
+  filter: brightness(0.8);
+}
+
+.grid-brightness-90 {
+  filter: brightness(0.9);
+}
+
+.grid-brightness-100 {
+  filter: brightness(1);
+}
+
+/* Classes alternativas para usar com opacity se brightness não funcionar bem */
+.grid-opacity-0 {
+  opacity: 0;
+}
+
+.grid-opacity-10 {
+  opacity: 0.1;
+}
+
+.grid-opacity-20 {
+  opacity: 0.2;
+}
+
+.grid-opacity-30 {
+  opacity: 0.3;
+}
+
+.grid-opacity-40 {
+  opacity: 0.4;
+}
+
+.grid-opacity-50 {
+  opacity: 0.5;
+}
+
+.grid-opacity-60 {
+  opacity: 0.6;
+}
+
+.grid-opacity-70 {
+  opacity: 0.7;
+}
+
+.grid-opacity-80 {
+  opacity: 0.8;
+}
+
+.grid-opacity-90 {
+  opacity: 0.9;
+}
+
+.grid-opacity-100 {
+  opacity: 1;
+}
+
+/* Classe para transições suaves */
+.grid-transition {
+  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
+/* =================================== */
+/* =================================== */

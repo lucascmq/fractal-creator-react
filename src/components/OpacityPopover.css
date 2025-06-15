@@ -1,34 +1,101 @@
 .opacity-popover {
   position: absolute;
   z-index: 1000;
-  background: #181A20;
-  border: 1.5px solid #4CC674;
-  border-radius: 10px;
-  box-shadow: 0 2px 16px #000a;
-  padding: 16px 18px 12px 18px;
+  background: transparent; /* Deixa o fundo totalmente transparente */
+  border: 2px solid #4CC674; /* Borda verde */
+  border-radius: 18px;
+  box-shadow: none;
+  padding: 12px 36px 28px 36px; /* Padding-top reduzido para 12px */
   color: #7DF9A6;
   font-family: Orbitron, Rajdhani, monospace;
-  font-size: 15px;
-  min-width: 180px;
-  min-height: 48px;
+  font-size: 28px; /* Texto maior */
+  min-width: 374px;
+  min-height: 374px;
+  width: 374px;
+  height: 374px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center; /* Centraliza horizontalmente */
+  justify-content: flex-start;
+  gap: 32px; /* Gap maior entre os elementos */
 }
 .opacity-popover label {
-  font-size: 13px;
+  font-size: 28px; /* Nomes ainda maiores */
   color: #4CC674;
-  margin-bottom: 6px;
-  font-weight: 600;
+  margin-bottom: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Centraliza o texto */
+  width: 100%;
+  border-bottom: 1.5px solid #4CC674;
+  padding-bottom: 8px;
+  margin-bottom: 22px;
+  text-align: center;
+}
+.opacity-popover .popover-section {
+  width: 100%;
+  border-bottom: 1.5px solid #4CC674;
+  margin-bottom: 22px;
+  padding-bottom: 14px;
 }
 .opacity-popover input[type="range"] {
-  width: 120px;
-  margin: 0 8px 0 0;
+  flex-grow: 1;
+  margin: 0 18px;
+  border: 1.5px solid #4CC674;
+  border-radius: 8px;
+  background: rgba(0,0,0,0.7);
+  height: 18px;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  display: block;
+}
+
+/* Estilo do thumb (o "botão" do slicer) */
+.opacity-popover input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px; /* Reduzido para visual mais equilibrado */
+  height: 18px;
+  border-radius: 50%;
+  background: #7DF9A6;
+  cursor: grab;
+  border: 2px solid #4CC674;
+  box-shadow: 0 0 6px rgba(125, 249, 166, 0.7);
+}
+
+.opacity-popover input[type="range"]::-moz-range-thumb {
+  width: 18px; /* Reduzido para visual mais equilibrado */
+  height: 18px;
+  border-radius: 50%;
+  background: #7DF9A6;
+  cursor: grab;
+  border: 2px solid #4CC674;
+  box-shadow: 0 0 6px rgba(125, 249, 166, 0.7);
+}
+
+.opacity-popover select,
+.opacity-popover input[type="number"] {
+  font-size: 24px;
+  border-radius: 8px;
+  padding: 10px 16px;
+  background: #181A20;
+  color: #7DF9A6;
+  border: 2px solid #4CC674;
+  margin-top: 6px;
+  margin-bottom: 6px;
+  width: 110px;
+  text-align: center;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
 .opacity-popover span {
-  font-size: 13px;
+  font-size: 11px; /* Diminuído para o modo Opacity */
   color: #7DF9A6;
-  margin-left: 8px;
+  min-width: 20px; /* Ajustado para o novo tamanho da fonte */
+  text-align: right; /* Alinha o número à direita */
 }
 .opacity-popover .close-btn {
   position: absolute;
@@ -37,7 +104,14 @@
   background: none;
   border: none;
   color: #7DF9A6;
-  font-size: 20px;
+  font-size: 32px !important;
+  font-weight: 900;
   cursor: pointer;
   padding: 0;
+  margin-left: 16px;
+  transition: background 0.2s;
+  border-radius: 50%;
+}
+.opacity-popover .close-btn:hover {
+  background: rgba(76, 198, 116, 0.08);
 }

@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 
-export default function AddLinePanel({ onAdd, onCancel }) {
+export default function AddLinePanel({ onAdd }) {
   // Limites centrados
   const MIN = -250;
   const MAX = 250;
@@ -12,7 +12,10 @@ export default function AddLinePanel({ onAdd, onCancel }) {
   const [y1, setY1] = useState(0);
   const [x2, setX2] = useState(100);
   const [y2, setY2] = useState(100);
+  const [selectedPattern, setSelectedPattern] = useState(null);
   const clamp = (val) => Math.max(MIN, Math.min(MAX, Number(val)));
+  
+  // Handler para adicionar linha customizada pelos inputs
   const handleSubmit = (e) => {
     e.preventDefault();
     const nx1 = clamp(x1);
@@ -23,139 +26,198 @@ export default function AddLinePanel({ onAdd, onCancel }) {
     onAdd({ x1: nx1, y1: ny1, x2: nx2, y2: ny2 });
   };
 
-  // Padrões rápidos de linhas
-  const addQuickPattern = (pattern) => {
-    const lines = getQuickPatternLines(pattern);
-    lines.forEach(line => onAdd(line));
-  };
-
+  // Função para obter as linhas de um padrão
   const getQuickPatternLines = (pattern) => {
     const size = 250; // Tamanho base dos padrões (metade do canvas 500x500)
     
     switch (pattern) {
+      case 'vertical':
+        return { x1: 0, y1: -size, x2: 0, y2: size };
+        
+      case 'horizontal':
+        return { x1: -size, y1: 0, x2: size, y2: 0 };
+        
       case 'diagonal-principal':
-        return [{ x1: -size, y1: -size, x2: size, y2: size }];
+        return { x1: -size, y1: -size, x2: size, y2: size };
       
       case 'diagonal-secundaria':
-        return [{ x1: -size, y1: size, x2: size, y2: -size }];
+        return { x1: -size, y1: size, x2: size, y2: -size };
       
       case 'x':
-        return [
-          { x1: -size, y1: -size, x2: size, y2: size },   // Diagonal principal
-          { x1: -size, y1: size, x2: size, y2: -size }    // Diagonal secundária
-        ];
-        case 'cruz':
-        return [
-          { x1: 0, y1: -size, x2: 0, y2: size },    // Vertical
-          { x1: -size, y1: 0, x2: size, y2: 0 }     // Horizontal
-        ];
+        return { x1: -size, y1: -size, x2: size, y2: size };
+        
+      case 'cruz':
+        return { x1: 0, y1: -size, x2: 0, y2: size };
       
       default:
-        return [];
+        return { x1: 0, y1: 0, x2: 100, y2: 100 };
     }
-  };  return (
-    <>
-      {/* Padrões rápidos de linhas */}
-      <div className="control-group">
-        <label>Padrões Rápidos</label>
-        <div className="quick-patterns">
-          <button 
-            type="button" 
-            className="pattern-btn" 
-            onClick={() => addQuickPattern('diagonal-principal')}
-            title="Diagonal Principal (\)"
-          >
-            <div className="pattern-icon diagonal-main"></div>
-            <span>Diagonal</span>
-          </button>
-          
-          <button 
-            type="button" 
-            className="pattern-btn" 
-            onClick={() => addQuickPattern('diagonal-secundaria')}
-            title="Diagonal Secundária (/)"
-          >
-            <div className="pattern-icon diagonal-secondary"></div>
-            <span>Diagonal</span>
-          </button>
-          
-          <button 
-            type="button" 
-            className="pattern-btn" 
-            onClick={() => addQuickPattern('x')}
-            title="X (Diagonais Cruzadas)"
-          >
-            <div className="pattern-icon x-pattern"></div>
-            <span>X</span>
-          </button>
-            <button 
-            type="button" 
-            className="pattern-btn" 
-            onClick={() => addQuickPattern('cruz')}
-            title="Cruz (+)"
-          >
-            <div className="pattern-icon cross-pattern"></div>
-            <span>Cruz</span>
-          </button>
+  };
+
+  // Handler para quando um padrão é selecionado e o botão adicionar é clicado
+  const handlePatternAdd = () => {
+    if (!selectedPattern) return;
+    const lineData = getQuickPatternLines(selectedPattern);
+    onAdd(lineData);
+    
+    // Caso específico para padrões compostos
+    if (selectedPattern === 'x') {
+      // Adiciona a segunda linha do X
+      setTimeout(() => {
+        onAdd({ x1: -250, y1: 250, x2: 250, y2: -250 });
+      }, 100);
+    } else if (selectedPattern === 'cruz') {
+      // Adiciona a segunda linha da cruz
+      setTimeout(() => {
+        onAdd({ x1: -250, y1: 0, x2: 250, y2: 0 });
+      }, 100);
+    }
+  };
+  
+  // Handler para quando um botão de padrão é clicado
+  const handleSelectPattern = (pattern) => {
+    setSelectedPattern(pattern);
+    
+    // Atualiza os inputs com as coordenadas do padrão
+    const lineData = getQuickPatternLines(pattern);
+    setX1(lineData.x1);
+    setY1(lineData.y1);
+    setX2(lineData.x2);
+    setY2(lineData.y2);
+  };
+
+  return (
+    <div className="add-line-panel">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div>
+          <label style={{ fontWeight: 600 }}>Linhas</label>
+          <div className="quick-patterns" style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 8,
+            marginBottom: 12
+          }}>
+            <button type="button" className={`editor-btn pattern-btn${selectedPattern === 'vertical' ? ' selected' : ''}`} onClick={() => handleSelectPattern('vertical')} title="Vertical" style={{ minWidth: 60, minHeight: 48, flexDirection: 'column', alignItems: 'center', display: 'flex' }}>
+              <svg width="24" height="24"><line x1="12" y1="3" x2="12" y2="21" stroke="#fff" strokeWidth="2"/></svg>
+              <span>Vertical</span>
+            </button>
+            <button type="button" className={`editor-btn pattern-btn${selectedPattern === 'horizontal' ? ' selected' : ''}`} onClick={() => handleSelectPattern('horizontal')} title="Horizontal" style={{ minWidth: 60, minHeight: 48, flexDirection: 'column', alignItems: 'center', display: 'flex' }}>
+              <svg width="24" height="24"><line x1="3" y1="12" x2="21" y2="12" stroke="#fff" strokeWidth="2"/></svg>
+              <span>Horizontal</span>
+            </button>
+            <button type="button" className={`editor-btn pattern-btn${selectedPattern === 'diagonal-principal' ? ' selected' : ''}`} onClick={() => handleSelectPattern('diagonal-principal')} title="Diagonal Principal (\\)" style={{ minWidth: 60, minHeight: 48, flexDirection: 'column', alignItems: 'center', display: 'flex' }}>
+              <svg width="24" height="24"><line x1="3" y1="3" x2="21" y2="21" stroke="#fff" strokeWidth="2"/></svg>
+              <span>Diagonal</span>
+            </button>
+            <button type="button" className={`editor-btn pattern-btn${selectedPattern === 'diagonal-secundaria' ? ' selected' : ''}`} onClick={() => handleSelectPattern('diagonal-secundaria')} title="Diagonal Secundária (/)" style={{ minWidth: 60, minHeight: 48, flexDirection: 'column', alignItems: 'center', display: 'flex' }}>
+              <svg width="24" height="24"><line x1="3" y1="21" x2="21" y2="3" stroke="#fff" strokeWidth="2"/></svg>
+              <span>Diagonal</span>
+            </button>
+          </div>
+        </div>
+        <div>
+          <label style={{ fontWeight: 600 }}>Padrões</label>
+          <div className="quick-patterns" style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 8
+          }}>
+            <button type="button" className={`editor-btn pattern-btn${selectedPattern === 'x' ? ' selected' : ''}`} onClick={() => handleSelectPattern('x')} title="X (diagonal cruzada)" style={{ minWidth: 60, minHeight: 48, flexDirection: 'column', alignItems: 'center', display: 'flex' }}>
+              <svg width="24" height="24"><line x1="3" y1="3" x2="21" y2="21" stroke="#fff" strokeWidth="2"/><line x1="3" y1="21" x2="21" y2="3" stroke="#fff" strokeWidth="2"/></svg>
+              <span>X</span>
+            </button>
+            <button type="button" className={`editor-btn pattern-btn${selectedPattern === 'cruz' ? ' selected' : ''}`} onClick={() => handleSelectPattern('cruz')} title="Cruz (vertical e horizontal)" style={{ minWidth: 60, minHeight: 48, flexDirection: 'column', alignItems: 'center', display: 'flex' }}>
+              <svg width="24" height="24"><line x1="12" y1="3" x2="12" y2="21" stroke="#fff" strokeWidth="2"/><line x1="3" y1="12" x2="21" y2="12" stroke="#fff" strokeWidth="2"/></svg>
+              <span>Cruz</span>
+            </button>
+          </div>
         </div>
       </div>
-
-      {/* Formulário manual */}
-      <div className="control-group">
-      <label>Adicionar Linha</label>
+      
       <form onSubmit={handleSubmit}>
-        <div className="coordinate-inputs">
-          <div>
-            <label>X1:</label>
+        <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label style={{ minWidth: 30, textAlign: 'right' }}>x1:</label>
             <input
               type="number"
+              step={10}
+              min={MIN}
+              max={MAX}
               value={x1}
-              min={MIN}
-              max={MAX}
-              onChange={e => setX1(e.target.value)}
+              onChange={e => setX1(Number(e.target.value))}
+              style={{ width: '100%' }}
+              onWheel={e => {
+                const step = 10;
+                const dir = e.deltaY < 0 ? 1 : -1;
+                setX1(prev => clamp(Number(prev) + dir * step));
+              }}
             />
-          </div>
-          <div>
-            <label>Y1:</label>
+            <label style={{ minWidth: 30, textAlign: 'right' }}>y1:</label>
             <input
               type="number"
+              step={10}
+              min={MIN}
+              max={MAX}
               value={y1}
-              min={MIN}
-              max={MAX}
-              onChange={e => setY1(e.target.value)}
+              onChange={e => setY1(Number(e.target.value))}
+              style={{ width: '100%' }}
+              onWheel={e => {
+                const step = 10;
+                const dir = e.deltaY < 0 ? 1 : -1;
+                setY1(prev => clamp(Number(prev) + dir * step));
+              }}
             />
           </div>
-        </div>
-        <div className="coordinate-inputs">
-          <div>
-            <label>X2:</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label style={{ minWidth: 30, textAlign: 'right' }}>x2:</label>
             <input
               type="number"
+              step={10}
+              min={MIN}
+              max={MAX}
               value={x2}
-              min={MIN}
-              max={MAX}
-              onChange={e => setX2(e.target.value)}
+              onChange={e => setX2(Number(e.target.value))}
+              style={{ width: '100%' }}
+              onWheel={e => {
+                const step = 10;
+                const dir = e.deltaY < 0 ? 1 : -1;
+                setX2(prev => clamp(Number(prev) + dir * step));
+              }}
             />
-          </div>
-          <div>
-            <label>Y2:</label>
+            <label style={{ minWidth: 30, textAlign: 'right' }}>y2:</label>
             <input
               type="number"
-              value={y2}
+              step={10}
               min={MIN}
               max={MAX}
-              onChange={e => setY2(e.target.value)}
+              value={y2}
+              onChange={e => setY2(Number(e.target.value))}
+              style={{ width: '100%' }}
+              onWheel={e => {
+                const step = 10;
+                const dir = e.deltaY < 0 ? 1 : -1;
+                setY2(prev => clamp(Number(prev) + dir * step));
+              }}
             />
           </div>
         </div>
-        <div className="slope-info">
-          Inclinação: {(y2 - y1) !== 0 ? ((x2 - x1) / (y2 - y1)).toFixed(2) : '∞'}
-        </div>
-        <div className="btn-group">          <button type="submit" className="editor-btn">Adicionar</button>
-          <button type="button" onClick={onCancel} className="editor-btn">Cancelar</button>
+        
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+          <button
+            type="button"
+            className="editor-btn"
+            style={{ minWidth: 120 }}
+            onClick={() => {
+              if (selectedPattern) {
+                handlePatternAdd();
+              } else {
+                handleSubmit({ preventDefault: () => {} });
+              }
+            }}
+            disabled={!selectedPattern && ([x1, y1, x2, y2].some(v => isNaN(v)))}
+          >Adicionar</button>
         </div>
       </form>
     </div>
-    </>
   );
 }

@@ -47,7 +47,7 @@ export default function OpacityPopover({ x, y, value, onChange, onClose }) {
           value={value}
           onChange={e => onChange(Number(e.target.value))}
         />
-        <span>{Math.round(value * 100)}%</span>
+        <span>{Math.round(value * 100)}</span>
       </label>
       <button className="close-btn" onClick={onClose}>×</button>
     </div>
