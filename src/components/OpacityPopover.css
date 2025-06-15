@@ -1,0 +1,43 @@
+.opacity-popover {
+  position: absolute;
+  z-index: 1000;
+  background: #181A20;
+  border: 1.5px solid #4CC674;
+  border-radius: 10px;
+  box-shadow: 0 2px 16px #000a;
+  padding: 16px 18px 12px 18px;
+  color: #7DF9A6;
+  font-family: Orbitron, Rajdhani, monospace;
+  font-size: 15px;
+  min-width: 180px;
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.opacity-popover label {
+  font-size: 13px;
+  color: #4CC674;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.opacity-popover input[type="range"] {
+  width: 120px;
+  margin: 0 8px 0 0;
+}
+.opacity-popover span {
+  font-size: 13px;
+  color: #7DF9A6;
+  margin-left: 8px;
+}
+.opacity-popover .close-btn {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #7DF9A6;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+}
