@@ -667,4 +667,141 @@ body.editing-mode {
   visibility: hidden;
   opacity: 0;
 }
+
 /* Ajustes para o elemento konvajs-content são implementados no componente FractalCanvas.jsx */
+
+/* Padrões rápidos de linhas */
+.quick-patterns {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.pattern-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid #555;
+  border-radius: 6px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #7DF9A6;
+  font-size: 11px;
+}
+
+.pattern-btn:hover {
+  border-color: #7DF9A6;
+  background: rgba(125, 249, 166, 0.1);
+  transform: translateY(-1px);
+}
+
+.pattern-icon {
+  width: 20px;
+  height: 20px;
+  position: relative;
+  margin-bottom: 2px;
+}
+
+/* Ícones dos padrões */
+.pattern-icon::before,
+.pattern-icon::after {
+  content: '';
+  position: absolute;
+  background: currentColor;
+}
+
+/* Diagonal principal \ */
+.diagonal-main::before {
+  width: 2px;
+  height: 100%;
+  transform: rotate(45deg);
+  left: 50%;
+  top: 0;
+  transform-origin: center;
+}
+
+/* Diagonal secundária / */
+.diagonal-secondary::before {
+  width: 2px;
+  height: 100%;
+  transform: rotate(-45deg);
+  left: 50%;
+  top: 0;
+  transform-origin: center;
+}
+
+/* X pattern */
+.x-pattern::before {
+  width: 2px;
+  height: 100%;
+  transform: rotate(45deg);
+  left: 50%;
+  top: 0;
+  transform-origin: center;
+}
+
+.x-pattern::after {
+  width: 2px;
+  height: 100%;
+  transform: rotate(-45deg);
+  left: 50%;
+  top: 0;
+  transform-origin: center;
+}
+
+/* Cruz + */
+.cross-pattern::before {
+  width: 100%;
+  height: 2px;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.cross-pattern::after {
+  width: 2px;
+  height: 100%;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+}
+
+/* Cruz completa * */
+.full-cross-pattern {
+  position: relative;
+}
+
+/* Cruz horizontal */
+.full-cross-pattern::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: currentColor;
+}
+
+/* Cruz vertical + diagonais */
+.full-cross-pattern::after {
+  content: '';
+  position: absolute;
+  width: 2px;
+  height: 100%;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  background: currentColor;
+  box-shadow: 
+    /* Diagonal principal \ */
+    -8px -8px 0 0 currentColor,
+    8px 8px 0 0 currentColor,
+    /* Diagonal secundária / */
+    8px -8px 0 0 currentColor,
+    -8px 8px 0 0 currentColor;
+}
