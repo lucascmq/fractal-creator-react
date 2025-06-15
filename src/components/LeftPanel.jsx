@@ -15,9 +15,7 @@ export default function LeftPanel({
   onAddLine, 
   onAddShape, 
   settings = {}, 
-  onSettingsChange = () => {}, 
-  onClearAll = () => {}, 
-  onResetView = () => {} 
+  onSettingsChange = () => {} 
 }) {
   const [activeTab, setActiveTab] = useState('lines');
     // Ref para o container do painel
@@ -104,8 +102,6 @@ export default function LeftPanel({
           <ConfigPanel 
             settings={settings} 
             onSettingsChange={onSettingsChange}
-            onClearAll={onClearAll}
-            onResetView={onResetView}
             onInputBlur={handleInputBlur}
           />
         </div>

@@ -7,8 +7,6 @@ import { COLORS } from '../utils/colors';
 export default function ConfigPanel({ 
   settings = {}, 
   onSettingsChange = () => {}, 
-  onClearAll = () => {},
-  onResetView = () => {},
   onInputBlur = () => {}
 }) {
   // Handler para alterações de checkbox
@@ -167,14 +165,6 @@ export default function ConfigPanel({
             />
           </div>
         )}      </div>
-      
-      <div className="control-group">
-        <label>🗑️ Ações:</label>
-        <div className="btn-group">
-          <button onClick={onClearAll} className="editor-btn">Limpar Tudo</button>
-          <button onClick={onResetView} className="editor-btn">Resetar Visualização</button>
-        </div>
-      </div>
     </div>
   );
 }
