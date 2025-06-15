@@ -6,6 +6,27 @@ export default function RightPanel({ lines, shapes, onUpdateLine, onUpdateShape,
   // Estado local para o Auto Y de cada linha
   const [autoY, setAutoY] = useState({});
   
+  // Ref para o container do painel
+  const asideRef = useRef(null);
+    // Dar foco automático no painel quando há elementos suficientes para scroll
+  useEffect(() => {
+    const totalElements = lines.length + shapes.length;
+    if (totalElements >= 2 && asideRef.current) {
+      asideRef.current.focus();
+    }
+  }, [lines.length, shapes.length]);
+  
+  // Função para retornar foco ao painel quando input perde foco
+  const handleInputBlur = () => {
+    const totalElements = lines.length + shapes.length;
+    if (totalElements >= 2 && asideRef.current) {
+      // Pequeno delay para evitar conflitos
+      setTimeout(() => {
+        asideRef.current.focus();
+      }, 10);
+    }
+  };
+  
   // Função para mover as camadas (layer) das formas
   const moveShapeLayer = (id, direction) => {
     const ordered = [...shapes].sort((a, b) => a.layer - b.layer);
@@ -69,41 +90,36 @@ export default function RightPanel({ lines, shapes, onUpdateLine, onUpdateShape,
   useEffect(() => {
     if (selectedShapeId && opacityRefs.current[selectedShapeId]) {
       opacityRefs.current[selectedShapeId].focus();
-    }
-  }, [selectedShapeId]);
-
-  // Handler robusto: trava scroll do painel ao focar input type=number usando addEventListener passive: false
-  const asideRef = useRef(null);
+    }  }, [selectedShapeId]);  // Handler robusto: controla scroll baseado no elemento sob o mouse
   useEffect(() => {
     const aside = asideRef.current;
     if (!aside) return;
     function wheelHandler(e) {
+      const elementUnderMouse = e.target;
       const active = document.activeElement;
-      // Só bloqueia o scroll se NÃO estiver sobre um input numérico focado
-      if (!(active && active.tagName === 'INPUT' && active.type === 'number')) {
-        e.preventDefault();
+        // Se o mouse está sobre um input (number/range), bloqueia scroll do container mas deixa o input processar
+      if (elementUnderMouse && elementUnderMouse.tagName === 'INPUT' && 
+          (elementUnderMouse.type === 'number' || elementUnderMouse.type === 'range')) {
+        e.stopPropagation(); // Impede que chegue ao container, mas deixa o input processar
+        return;
       }
+      
+      // Se há um input focado e o mouse está sobre ele, bloqueia scroll do container
+      if (active && active.tagName === 'INPUT' && 
+          (active.type === 'number' || active.type === 'range') && 
+          elementUnderMouse === active) {
+        e.stopPropagation(); // Impede que chegue ao container, mas deixa o input processar
+        return;
+      }
+      
+      // Caso contrário, permite scroll normal do container
     }
     aside.addEventListener('wheel', wheelHandler, { passive: false });
     return () => aside.removeEventListener('wheel', wheelHandler);
-  }, []);
-
-  return (
-    <aside
-      ref={asideRef}
-      style={{
-        background: 'rgba(10,20,10,0.95)',
-        borderLeft: '2px solid #4CC674',
-         width: '100%',
-        padding: 24,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 24,
-        height: '100%',
-        fontFamily: 'Orbitron, Rajdhani, monospace',
-      }}
-    >
-      <h3 style={{ color: '#4CC674', marginBottom: 12 }}>Elementos Criados</h3>
+  }, []);return (
+    <aside ref={asideRef} className="fractal-aside right">
+      <div className="editor-card">
+        <h3>Elementos Criados</h3>
       <div>
         <h4 style={{ color: '#7DF9A6', marginBottom: 8 }}>Linhas</h4>
         {lines.length === 0 && <p style={{ color: '#888' }}>Nenhuma linha criada.</p>}
@@ -122,7 +138,7 @@ export default function RightPanel({ lines, shapes, onUpdateLine, onUpdateShape,
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <span style={labelStyle}>x1 =</span>
-                  <input type="number" value={line.x1} min={-250} max={250} onChange={e => handleLineInput(line.id, 'x1', e.target.value, line)} style={inputStyle} onWheel={e => { console.log('wheel x1'); e.stopPropagation(); }} />
+                  <input type="number" value={line.x1} min={-250} max={250} onChange={e => handleLineInput(line.id, 'x1', e.target.value, line)} style={inputStyle} onWheel={e => { console.log('wheel x1'); e.stopPropagation(); }} onBlur={handleInputBlur} />
                   <span style={labelStyle}>y1 =</span>
                   <input type="number" value={line.y1} min={-250} max={250} onChange={e => handleLineInput(line.id, 'y1', e.target.value, line)} style={inputStyle} onWheel={e => { console.log('wheel y1'); e.stopPropagation(); }} />
                 </div>
@@ -245,8 +261,8 @@ export default function RightPanel({ lines, shapes, onUpdateLine, onUpdateShape,
                 </button>
               </div>
             </div>
-          );
-        })}
+          );        })}
+      </div>
       </div>
     </aside>
   );

@@ -5,12 +5,27 @@ body, #root {
   background-color: #0a0a0a;
   color: #f0f0f0;
   font-family: 'Rajdhani', 'Orbitron', monospace, sans-serif;
-  min-height: 100vh;
+  height: 100vh; /* Altura fixa igual à viewport */
+  max-height: 100vh; /* Não permite ultrapassar */
   margin: 0;
   padding: 0;
+  overflow-x: hidden; /* Remove scroll horizontal desnecessário */
+  overflow-y: hidden; /* Remove scroll vertical por padrão */
   background-image:
     radial-gradient(circle at 10% 20%, rgba(76, 198, 116, 0.03) 0%, transparent 30%),
     radial-gradient(circle at 90% 80%, rgba(76, 198, 116, 0.03) 0%, transparent 30%);
+}
+
+/* Desabilita scroll da página quando estamos editando formas */
+body.editing-mode {
+  overflow: hidden; /* Scroll totalmente desabilitado durante edição */
+}
+
+/* Permite scroll apenas quando usuário faz zoom */
+@media (min-resolution: 1.5dppx) {
+  body {
+    overflow-y: auto;
+  }
 }
 
 #root {
@@ -181,8 +196,7 @@ body, #root {
 /* ESTILOS DOS PAINÉIS LATERAIS */
 /* =================================== */
 /* Padroniza as colunas laterais para simetria perfeita */
-.editor-column,
-.elements-list-column {
+.editor-column {
   width: 100%;
   min-width: 0;
   max-width: 100%;
@@ -206,14 +220,8 @@ body, #root {
   border-left: none;
 }
 
-.elements-list-column {
-  border-left: 3px solid var(--primary);
-  border-right: none;
-}
-
 /* Cards internos dos asides: ocupam 100% da coluna */
-.editor-column > *,
-.elements-list-column > * {
+.editor-column > * {
   width: 100%;
   box-sizing: border-box;
   margin: 0;
@@ -235,7 +243,6 @@ body, #root {
 .editor-card {
   width: 100%;
   background: rgba(20, 20, 20, 0.9);
-  border: 1px solid #4CC674;
   border-radius: 8px;
   padding: 8px;
   position: relative;
@@ -295,13 +302,58 @@ body, #root {
 .editor-column .editor-card {
   border-radius: 0 !important;
   max-height: unset;
-  border-left: none;
-  border-right: 1px solid #4CC674;
-  border-top: none;
-  border-bottom: none;
+  border: none; /* Remove todas as bordas duplicadas */
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+}
+
+/* =================================== */
+/* PAINÉIS LATERAIS UNIFICADOS */
+/* =================================== */
+/* Estilo base para ambos os painéis laterais */
+.fractal-aside {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(10, 20, 10, 0.95);
+  font-family: 'Orbitron', 'Rajdhani', monospace;
+}
+
+/* Painéis laterais - estilo unificado */
+.fractal-aside .editor-card {
+  padding: 8px;
+  gap: 0;
+}
+
+/* Títulos unificados para ambos os painéis */
+.fractal-aside h3 {
+  color: #4CC674 !important;
+  margin-bottom: 15px !important;
+  margin-top: 10px !important;
+  font-size: 20px !important;
+  text-align: center !important;
+  letter-spacing: 1px !important;
+  font-family: 'Orbitron', sans-serif !important;
+  font-weight: 500 !important;
+  text-transform: uppercase !important;
+  position: relative !important;
+  display: inline-block !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+
+/* Sublinhado decorativo unificado */
+.fractal-aside h3::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #4CC674, transparent);
 }
 
 /* =================================== */

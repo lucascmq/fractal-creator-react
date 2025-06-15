@@ -15,7 +15,11 @@ export default function FractalCanvas({
   lines = [], 
   shapes = [],
   settings = {},
-  onUpdateShape // Recebe função do App para atualizar shape
+  onUpdateShape, // Recebe função do App para atualizar shape
+  selectedShapeId: selectedShapeIdProp,
+  setSelectedShapeId: setSelectedShapeIdProp,
+  isEditingShape,
+  setIsEditingShape
 }) {
   // Canvas quadrado fixo
   const width = CANVAS_SIZE;
@@ -104,26 +108,6 @@ export default function FractalCanvas({
       opacity={0.5}
     />
   );  // Linhas centrais (sempre visíveis)
-  const centerLines = [
-    // Linha vertical central
-    <Line
-      key="center-v"
-      points={[...toCanvas(0, -CANVAS_SIZE / 2), ...toCanvas(0, CANVAS_SIZE / 2)]}
-      stroke={COLORS.primary}
-      strokeWidth={2}
-      opacity={0.5}
-      dash={[8, 8]}
-    />,
-    // Linha horizontal central
-    <Line
-      key="center-h"
-      points={[...toCanvas(-CANVAS_SIZE / 2, 0), ...toCanvas(CANVAS_SIZE / 2, 0)]}
-      stroke={COLORS.primary}
-      strokeWidth={2}
-      opacity={0.5}
-      dash={[8, 8]}
-    />
-  ];
 
   // Grid completo (4x4), só aparece se showGrid estiver ativo
   const fullGridLines = [];
@@ -244,14 +228,10 @@ export default function FractalCanvas({
       );
     }
   }
-
   // Define se as formas são preenchidas ou apenas contorno
   const isOutline = settings.shapeStyle === 'outline';
-  // Array de opacidades fixas para o slider
-  const shapeFillOpacities = [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,1];
-  const idx = Number(settings.shapeFillOpacityIndex);
-  const fillOpacity = shapeFillOpacities[isNaN(idx) ? 5 : idx];
-  console.log('shapeFillOpacityIndex:', settings.shapeFillOpacityIndex, '| idx:', idx, '| fillOpacity:', fillOpacity);
+  // Opacidade padrão para novas formas (antes era configurável, agora é fixa)
+  const defaultFillOpacity = 0.5;
   // Estado para marcador de snap visual
   const [snapMarker, setSnapMarker] = useState(null);
   // Estado para seleção de forma
@@ -310,10 +290,15 @@ export default function FractalCanvas({
       });
     }
   }
-
   // Handler de scroll: ajusta opacidade só da forma selecionada
   function handleWheelDiv(e) {
     if (!selectedShapeId) return;
+    
+    // Ativa modo de edição para prevenir scroll da página
+    if (setIsEditingShape && !isEditingShape) {
+      setIsEditingShape(true);
+    }
+    
     // Removido e.preventDefault() para evitar erro com passive event listener
     const delta = e.deltaY < 0 ? 0.1 : -0.1;
     const shape = shapes.find(s => s.id === selectedShapeId);
@@ -407,7 +392,6 @@ export default function FractalCanvas({
           {/* Renderiza grid, bordas e linhas centrais apenas se showGrid estiver ativo */}
           {settings.showGrid && divisionLines}
           {settings.showGrid && borderLines}
-          {settings.showGrid && settings.gridDivisions === 2 && centerLines}
           {/* NÃO renderiza guideLines nem borderLines quando o grid está desligado */}
           {/* Renderiza bordas do grid (sempre visíveis) */}
           {borderLines}
@@ -452,7 +436,7 @@ export default function FractalCanvas({
     const [x, y] = toCanvas(shape.x, shape.y);
     const color = COLORS.primary;
     const isSelected = shape.id === selectedShapeId;
-    const shapeOpacity = typeof shape.fillOpacity === 'number' ? shape.fillOpacity : fillOpacity;
+    const shapeOpacity = typeof shape.fillOpacity === 'number' ? shape.fillOpacity : defaultFillOpacity;
     const shapeMaskOpacity = typeof shape.maskOpacity === 'number' ? shape.maskOpacity : 0;
       // Renderização especial para losango
     if (["losango", "diamond"].includes(shape.type.toLowerCase())) {
@@ -602,7 +586,7 @@ export default function FractalCanvas({
           <ShapePopover
             x={popover.x}
             y={popover.y}
-            value={typeof shape.fillOpacity === 'number' ? shape.fillOpacity : fillOpacity}
+            value={typeof shape.fillOpacity === 'number' ? shape.fillOpacity : defaultFillOpacity}
             onChange={handleChangeOpacity}
             onClose={handleClosePopover}
             layer={shape.layer}

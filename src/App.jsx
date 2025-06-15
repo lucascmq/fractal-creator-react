@@ -11,6 +11,9 @@ function App() {
   const [selectedShapeId, setSelectedShapeId] = useState(null);
   const [localShapes, setLocalShapes] = useState([]);
   
+  // Estado para controlar quando estamos editando e desabilitar scroll da página
+  const [isEditingShape, setIsEditingShape] = useState(false);
+  
   // Estado para as configurações
   const [settings, setSettings] = useState({
     showGrid: true, // grid ligado por padrão
@@ -23,6 +26,18 @@ function App() {
     guideGridSize: 125,
     centerText: '' // frase central vazia
   });
+
+  // Efeito para controlar scroll da página durante edição
+  useEffect(() => {
+    if (isEditingShape) {
+      document.body.classList.add('editing-mode');
+    } else {
+      document.body.classList.remove('editing-mode');
+    }
+    
+    // Cleanup ao desmontar componente
+    return () => document.body.classList.remove('editing-mode');
+  }, [isEditingShape]);
 
   // Efeito para aplicar as configurações
   useEffect(() => {
@@ -128,9 +143,11 @@ function App() {
             onUpdateShape={handleUpdateShape}
             selectedShapeId={selectedShapeId}
             setSelectedShapeId={setSelectedShapeId}
+            isEditingShape={isEditingShape}
+            setIsEditingShape={setIsEditingShape}
           />
         </main>
-        <aside className="elements-list-column">
+        <aside className="editor-column" tabIndex="0">
           <RightPanel
             lines={lines}
             shapes={shapes}

@@ -25,6 +25,7 @@ Este documento descreve o plano de evolução do Fractal Creator, com as funcion
 - [ ] Salvar/carregar projetos (exportação/importação JSON)
 - [ ] Exportação PNG/SVG em alta resolução
 - [ ] Tutoriais interativos
+- [ ] **Scroll inteligente com zoom**: Permitir scroll da página apenas quando usuário faz zoom no navegador, mantendo layout perfeito em tamanho normal
 
 ### Recursos gráficos
 - [ ] Paleta de cores customizável

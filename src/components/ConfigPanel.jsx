@@ -8,7 +8,8 @@ export default function ConfigPanel({
   settings = {}, 
   onSettingsChange = () => {}, 
   onClearAll = () => {},
-  onResetView = () => {} 
+  onResetView = () => {},
+  onInputBlur = () => {}
 }) {
   // Handler para alterações de checkbox
   const handleSettingChange = (setting) => (e) => {
@@ -45,6 +46,21 @@ export default function ConfigPanel({
     if (nextIdx !== currentIdx) {
       onSettingsChange({ ...settings, gridDivisions: divisors[nextIdx], showGrid: true });
     }
+  };  // Handler para scroll no slider de intensidade do grid
+  const handleGridIntensityWheel = (e) => {
+    e.stopPropagation(); // Impede que suba para o LeftPanel
+    
+    const currentValue = settings.gridIntensity || 0.3;
+    const step = 0.1; // Incremento de 10% (10 frames total: 0.05 → 1.0)
+    let newValue = currentValue;
+    
+    if (e.deltaY > 0) { // Scroll para baixo - diminui
+      newValue = Math.max(0.05, currentValue - step);
+    } else { // Scroll para cima - aumenta
+      newValue = Math.min(1, currentValue + step);
+    }
+    
+    onSettingsChange({ ...settings, gridIntensity: parseFloat(newValue.toFixed(2)) });
   };
 
   return (
@@ -69,8 +85,7 @@ export default function ConfigPanel({
           </div>
         </div>
         <div className="config-row" style={{ width: '100%', flexDirection: 'column', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 8 }}>
-          <label htmlFor="gridIntensity" style={{ textAlign: 'center', marginBottom: 6, fontWeight: 500 }}>Intensidade do grid:</label>
-          <input
+          <label htmlFor="gridIntensity" style={{ textAlign: 'center', marginBottom: 6, fontWeight: 500 }}>Intensidade do grid:</label>          <input
             type="range"
             id="gridIntensity"
             min={0.05}
@@ -78,7 +93,12 @@ export default function ConfigPanel({
             step={0.01}
             value={settings.gridIntensity || 0.3}
             onChange={e => onSettingsChange({ ...settings, gridIntensity: parseFloat(e.target.value) })}
-            style={{ width: 120 }}
+            onWheel={handleGridIntensityWheel}
+            onBlur={() => {
+              onInputBlur(); // Retorna foco para o painel
+            }}
+            tabIndex={0} // Torna o slider focável
+            style={{ width: 120, outline: 'none' }}
           />
         </div>
         <div className="config-row" style={{ width: '100%', flexDirection: 'column', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 8 }}>
@@ -146,24 +166,7 @@ export default function ConfigPanel({
               }}
             />
           </div>
-        )}
-      </div>
-      
-      <div className="control-group">
-        <label style={{ color: '#4CC674', marginBottom: 8, display: 'block', textAlign: 'left' }}>🟦 Opacidade da forma:</label>
-        <input
-          type="range"
-          min={0}
-          max={9}
-          step={1}
-          value={settings.shapeFillOpacityIndex ?? 5}
-          onChange={e => onSettingsChange({ ...settings, shapeFillOpacityIndex: parseInt(e.target.value) })}
-          style={{ width: 120, marginBottom: 8 }}
-        />
-        <div style={{ fontSize: 12, color: COLORS.secondary, marginTop: -4 }}>
-          {['Apenas linhas','10%','20%','30%','40%','50%','60%','70%','80%','Preenchida'][settings.shapeFillOpacityIndex ?? 5]}
-        </div>
-      </div>
+        )}      </div>
       
       <div className="control-group">
         <label>🗑️ Ações:</label>
