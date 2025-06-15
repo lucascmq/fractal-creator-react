@@ -8,6 +8,7 @@ function App() {
   // Estados globais para linhas e formas
   const [lines, setLines] = useState([]);
   const [shapes, setShapes] = useState([]);
+  const [groups, setGroups] = useState([]); // Estado para grupos (ainda não usado)
   const [selectedShapeId, setSelectedShapeId] = useState(null);
   const [localShapes, setLocalShapes] = useState([]);
   
