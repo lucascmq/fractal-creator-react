@@ -131,8 +131,6 @@ function App() {
             onAddShape={handleAddShape} 
             settings={settings}
             onSettingsChange={handleSettingsChange}
-            onClearAll={handleClearAll}
-            onResetView={handleResetView}
           />
         </aside>
         <main className="canvas-column">
