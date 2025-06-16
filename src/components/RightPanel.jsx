@@ -367,6 +367,7 @@ export default function RightPanel({
         id: newId,
         x: (orig.x - cx),
         y: (orig.y - cy),
+        rotation: orig.rotation || 0, // Mantém a rotação original
         name: orig.name ? orig.name + ' (cópia)' : undefined
       };
     });
@@ -381,6 +382,7 @@ export default function RightPanel({
         y1: (orig.y1 - cy),
         x2: (orig.x2 - cx),
         y2: (orig.y2 - cy),
+        rotation: orig.rotation || 0, // Mantém a rotação original
         name: orig.name ? orig.name + ' (cópia)' : undefined
       };
     });
@@ -397,6 +399,7 @@ export default function RightPanel({
       id: 'group-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
       name: group.name + ' (cópia)',
       children: [...newShapeObjs, ...newLineObjs].map(e => e.id),
+      rotation: group.rotation || 0, // Copia a rotação do grupo original
       createdAt: Date.now(),
     };
     if (typeof window.handleAddGroup === 'function') {
@@ -526,7 +529,27 @@ export default function RightPanel({
                     </button>
                   </div>
                 </div>
-                <div style={{ 
+                {/* NOVO: Controle de Rotação para o Grupo */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, justifyContent: 'center' }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>Rotação:</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="359"
+                    step="15"
+                    value={group.rotation || 0}
+                    onChange={e => onUpdateGroup(group.id, { rotation: Number(e.target.value) })}
+                    style={{ ...inputStyle, width: 60 }}
+                    onWheel={e => {
+                      e.stopPropagation();
+                      const step = 15;
+                      const dir = e.deltaY < 0 ? 1 : -1;
+                      onUpdateGroup(group.id, { rotation: (Number(group.rotation || 0) + dir * step + 360) % 360 });
+                    }}
+                    onBlur={handleInputBlur}
+                  />
+                </div>
+                <div style={{
                   display: 'flex',
                   flexDirection: 'row',
                   gap: '8px',

@@ -153,6 +153,12 @@ function App() {  // Estados globais para linhas e formas
   const handleRemoveFromGroup = (groupId, elementId) => {
     setGroups(prev => removeChildFromGroup(prev, groupId, elementId));
   };
+
+  // Atualiza propriedades de um grupo
+  const handleUpdateGroup = (groupId, newParams) => {
+    setGroups(prev => prev.map(group => group.id === groupId ? { ...group, ...newParams } : group));
+  };
+
     // Alterna a seleção de um elemento
   const handleToggleElementSelection = (elementId, elementType) => {
     setSelectedElements(prev => {
@@ -239,6 +245,7 @@ function App() {  // Estados globais para linhas e formas
             onDeleteGroup={handleDeleteGroup}
             onAddToGroup={handleAddToGroup}
             onRemoveFromGroup={handleRemoveFromGroup}
+            onUpdateGroup={handleUpdateGroup}
           />
         </aside>
       </div>

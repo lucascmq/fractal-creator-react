@@ -11,8 +11,8 @@ import ShapePopover from './ShapePopover';
 import LinePopover from './LinePopover';
 import { useKeyboardSelection } from '../hooks/useKeyboardSelection';
 import { useFocusControl } from '../hooks/useFocusControl';
-import { 
-  CANVAS_SIZE, 
+import {
+  CANVAS_SIZE,
   toCanvas,
   getNearestGridPoint,
   generateMainGridLines,
@@ -28,6 +28,7 @@ export default function FractalCanvas({
   settings = {},
   onUpdateShape, // Recebe função do App para atualizar shape
   onUpdateLine, // NOVO: para atualizar linha
+  onUpdateGroup, // NOVO: para atualizar grupo
   selectedShapeId: selectedShapeIdProp,
   setSelectedShapeId: setSelectedShapeIdProp,
   isEditingShape,
@@ -202,7 +203,7 @@ export default function FractalCanvas({
     }
   }
   // Estado para o popover de edição (tipo, posição, dados)
-  const [editPopover, setEditPopover] = useState(null); // { type: 'shape'|'line', x, y, data }
+  const [editPopover, setEditPopover] = useState(null); // { type: 'shape'|'line'|'group', x, y, data }
 
   // Função para abrir popover de shape
   function openShapePopover(shape) {
@@ -239,6 +240,7 @@ export default function FractalCanvas({
     setEditPopover(null);
     setSelectedShapeId(null);
     setSelectedLineId(null);
+    setSelectedGroupId(null); // NOVO: Limpa seleção de grupo
   }
 
   // Handler de clique na shape (abre popover)
@@ -268,6 +270,33 @@ export default function FractalCanvas({
         onClearSelection();
       }
     }
+  }
+
+  // Estado para grupo selecionado
+  const [selectedGroupId, setSelectedGroupId] = useState(null);
+
+  // Função para abrir popover de grupo
+  function openGroupPopover(group) {
+    // Posição: centro do grupo (aproximado)
+    const [canvasX, canvasY] = toCanvasZ(group.x || 0, group.y || 0);
+    setEditPopover({
+      type: 'group',
+      x: canvasX,
+      y: canvasY,
+      data: group
+    });
+    setSelectedGroupId(group.id);
+    setSelectedShapeId(null);
+    setSelectedLineId(null);
+  }
+
+  // Handler de clique no grupo (abre popover)
+  function handleGroupClick(id, evt) {
+    const group = groups.find(g => g.id === id);
+    if (group) {
+      openGroupPopover(group);
+    }
+    if (evt && evt.cancelBubble !== undefined) evt.cancelBubble = true;
   }
 
   // Handler de scroll: ajusta opacidade só da forma selecionada
@@ -434,9 +463,36 @@ export default function FractalCanvas({
   }
 
   // Handlers de zoom e pan (devem estar antes do JSX)
-  const handleZoomIn = () => setZoom(z => Math.min(z * 2, 16));
-  const handleZoomOut = () => setZoom(z => Math.max(z / 2, 1));
-  const handlePan = (dx, dy) => setViewportCenter(c => ({ x: c.x + dx, y: c.y + dy }));
+  const handleZoomIn = () => {
+    // Calcula o próximo zoom
+    const nextZoom = Math.min(zoom * 2, 16);
+    // Calcula o tamanho lógico da área visível após o zoom
+    const logicalSize = 500 / nextZoom;
+    // Garante que o centro não ultrapasse os limites
+    setViewportCenter(c => ({
+      x: Math.max(-250 + logicalSize / 2, Math.min(250 - logicalSize / 2, c.x)),
+      y: Math.max(-250 + logicalSize / 2, Math.min(250 - logicalSize / 2, c.y)),
+    }));
+    setZoom(nextZoom);
+  };
+  const handleZoomOut = () => {
+    const nextZoom = Math.max(zoom / 2, 1);
+    const logicalSize = 500 / nextZoom;
+    setViewportCenter(c => ({
+      x: Math.max(-250 + logicalSize / 2, Math.min(250 - logicalSize / 2, c.x)),
+      y: Math.max(-250 + logicalSize / 2, Math.min(250 - logicalSize / 2, c.y)),
+    }));
+    setZoom(nextZoom);
+  };
+  const handlePan = (dx, dy) => {
+    // Limita o pan para não sair dos limites
+    const logicalSize = 500 / zoom;
+    setViewportCenter(c => {
+      const nx = Math.max(-250 + logicalSize / 2, Math.min(250 - logicalSize / 2, c.x + dx));
+      const ny = Math.max(-250 + logicalSize / 2, Math.min(250 - logicalSize / 2, c.y + dy));
+      return { x: nx, y: ny };
+    });
+  };
   const handleResetZoom = () => {
     setZoom(1);
     setViewportCenter({ x: 0, y: 0 });
@@ -471,41 +527,69 @@ export default function FractalCanvas({
     popoverLine = lines.find(l => l.id === editPopover.data.id);
   }
 
+  // Estado para ativar/desativar o zoom
+  const [zoomEnabled, setZoomEnabled] = useState(true);
+
   return (
-    <div className="fractal-canvas-container grid-transition" style={{ position: 'relative' }}>
-      {/* ...existing code... */}
+    <div className="fractal-canvas-container grid-transition" style={{ position: 'relative' }} onWheel={handleWheelDiv}>
+      {/* Checkbox de zoom minimalista, totalmente fora do canvas, alinhada à borda esquerda da coluna */}
+      <div style={{ position: 'absolute', right: '100%', bottom: 10, marginRight: 8, zIndex: 120 }}>
+        <label style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
+          background: '#181A20EE', border: '2px solid #4CC674', borderRadius: 7,
+          padding: '5px 7px 4px 7px', color: '#7DF9A6', fontWeight: 700, fontSize: 13,
+          cursor: 'pointer', userSelect: 'none', boxShadow: '0 1px 4px #000A',
+          minWidth: 30
+        }}>
+          <input
+            type="checkbox"
+            checked={zoomEnabled}
+            onChange={e => setZoomEnabled(e.target.checked)}
+            style={{
+              width: 15, height: 15, accentColor: '#4CC674', margin: 0,
+              border: '2px solid #4CC674', borderRadius: 4, background: '#222',
+              boxShadow: '0 1px 3px #0008', cursor: 'pointer',
+              transition: 'accent-color 0.2s',
+            }}
+            aria-label="Ativar/desativar zoom"
+          />
+          <span style={{ display: 'block', lineHeight: 1.1, paddingTop: 2, fontFamily: 'Rajdhani, monospace', fontWeight: 700, color: '#7DF9A6', fontSize: 12, letterSpacing: 1 }}>Zoom</span>
+        </label>
+      </div>
 
       {/* Botão de ativação dos controles de zoom */}
-      <button
-        id="zoom-btn"
-        onClick={() => setShowZoomControls(v => !v)}
-        style={{
-          position: 'absolute',
-          left: 18,
-          bottom: 18,
-          width: 48,
-          height: 48,
-          borderRadius: 12,
-          background: showZoomControls ? '#181A20EE' : 'rgba(24,26,32,0.7)',
-          border: '2px solid #4CC674',
-          color: '#7DF9A6',
-          fontSize: 28,
-          fontWeight: 700,
-          boxShadow: '0 2px 8px #000A',
-          zIndex: 50,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'background 0.2s',
-        }}
-        title={showZoomControls ? 'Ocultar controles de zoom' : 'Mostrar controles de zoom'}
-      >
-        🔍
-      </button>
+      {zoomEnabled && (
+        <button
+          id="zoom-btn"
+          onClick={() => setShowZoomControls(v => !v)}
+          style={{
+            position: 'absolute',
+            left: 18,
+            bottom: 18,
+            width: 48,
+            height: 48,
+            borderRadius: 12,
+            background: showZoomControls ? '#181A20EE' : 'rgba(24,26,32,0.7)',
+            border: '2px solid #4CC674',
+            color: '#7DF9A6',
+            fontSize: 28,
+            fontWeight: 700,
+            boxShadow: '0 2px 8px #000A',
+            zIndex: 50,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'background 0.2s',
+          }}
+          title={showZoomControls ? 'Ocultar controles de zoom' : 'Mostrar controles de zoom'}
+        >
+          🔍
+        </button>
+      )}
 
       {/* Painel de controles de zoom */}
-      {showZoomControls && (
+      {zoomEnabled && showZoomControls && (
         <div
           id="zoom-panel"
           style={{
@@ -560,167 +644,229 @@ export default function FractalCanvas({
         ref={containerRef}
       >
         <Layer>
-          {/* Linhas do grid principal (ajustadas para o zoom) */}
-          {mainGridLines}
-          {/* Linhas de borda do grid */}
+          {/* Linhas do grid principal (ajustadas para o zoom) - condicional ao settings.showGrid */}
+          {settings.showGrid && mainGridLines}
+          {/* Linhas de borda do grid - sempre visíveis */}
           {borderLines}
           {/* Linhas de divisão internas (se houver) */}
           {divisionLines}
           {/* Marcador de snap (se ativo) */}
           {snapMarker && (
-            <Circle
-              x={snapMarker.x}
-              y={snapMarker.y}
-              radius={4}
-              fill="#FFD700"
-              stroke="#000"
-              strokeWidth={1}
-            />
+            <>
+              <Circle
+                x={snapMarker.x}
+                y={snapMarker.y}
+                radius={4}
+                fill="#FFD700"
+                stroke="#000"
+                strokeWidth={1}
+              />
+              {/* Box de coordenadas do snap */}
+              <Rect
+                x={snapMarker.x + 10}
+                y={snapMarker.y - 24}
+                width={80}
+                height={28}
+                fill="#181A20EE"
+                stroke="#4CC674"
+                strokeWidth={2}
+                cornerRadius={7}
+                shadowBlur={6}
+                shadowColor={'#000'}
+              />
+              <Text
+                x={snapMarker.x + 18}
+                y={snapMarker.y - 18}
+                text={`x: ${snapMarker.logical.x}  y: ${snapMarker.logical.y}`}
+                fontSize={15}
+                fontFamily="Rajdhani, monospace"
+                fill="#7DF9A6"
+                fontStyle="bold"
+              />
+            </>
           )}
         </Layer>
-        <Layer>
-          {/* Formas não agrupadas (ajustadas para o zoom) */}
-          {Array.isArray(ungroupedShapes) && ungroupedShapes
-            .filter(shape => shape && shape.x !== undefined && shape.y !== undefined && shape.type)
-            .slice()
-            .sort((a, b) => a.layer - b.layer)
-            .map(shape => {
-              const typeLower = String(shape.type).toLowerCase();
-              // Renderização especial para losango
-              if (["losango", "diamond"].includes(typeLower)) {
-                const [x, y] = toCanvasZ(shape.x, shape.y);
-                const color = COLORS.primary;
-                const isSelected = selectedShapeId === shape.id;
-                const isGroupSelected = selectedElements.some(id => id === shape.id);
-                const shapeOpacity = typeof shape.fillOpacity === 'number' ? shape.fillOpacity : defaultFillOpacity;
-                const shapeMaskOpacity = typeof shape.maskOpacity === 'number' ? shape.maskOpacity : 0;
-                const scale = shape.scale || 1;
-                const h = 124 * scale * zoom;
-                const w = 62 * scale * zoom;
-                const rotation = shape.rotation || 0;
-                return (
-                  <React.Fragment key={shape.id}>
-                    <Group x={x} y={y} rotation={rotation}>
-                      {shapeMaskOpacity > 0 && (
-                        <Line
-                          points={[0, -h/2, w/2, 0, 0, h/2, -w/2, 0]}
-                          closed
-                          fill="#000"
-                          stroke="#000"
-                          strokeWidth={0}
-                          opacity={shapeMaskOpacity}
-                          onClick={evt => {
-                            handleShapeClick(shape.id, evt);
-                            handleElementSelect(shape.id, 'shape', evt);
-                          }}
-                          listening={true}
-                        />
-                      )}
-                      <Line
-                        points={[0, -h/2, w/2, 0, 0, h/2, -w/2, 0]}
-                        closed
-                        stroke={isSelected ? '#FFD700' : isGroupSelected ? '#4CC674' : color}
-                        strokeWidth={isSelected ? 4 : isGroupSelected ? 3 : 2}
-                        fill={undefined}
-                        opacity={1 - shapeOpacity}
-                        onClick={evt => {
-                          handleShapeClick(shape.id, evt);
-                          handleElementSelect(shape.id, 'shape', evt);
-                        }}
-                      />
-                      <Line
-                        points={[0, -h/2, w/2, 0, 0, h/2, -w/2, 0]}
-                        closed
-                        fill={color}
-                        stroke={color}
-                        strokeWidth={0}
-                        opacity={shapeOpacity}
-                        onClick={evt => {
-                          handleShapeClick(shape.id, evt);
-                          handleElementSelect(shape.id, 'shape', evt);
-                        }}
-                      />
-                    </Group>
-                  </React.Fragment>
-                );
-              }
-              // Polígonos e outros shapes
-              let mappedType = shape.type;
-              let mappedSides = undefined;
-              if (["triangle", "triangulo"].includes(typeLower)) {
-                mappedType = "polygon";
-                mappedSides = 3;
-              } else if (["pentagono", "pentagon"].includes(typeLower)) {
-                mappedType = "polygon";
-                mappedSides = 5;
-              } else if (["hexagono", "hexagon"].includes(typeLower)) {
-                mappedType = "polygon";
-                mappedSides = 6;
-              } else if (["square"].includes(typeLower)) {
-                mappedType = "square";
-                mappedSides = undefined;
-              } else if (["circle"].includes(typeLower)) {
-                mappedType = "circle";
-                mappedSides = undefined;
-              }
-              const [x, y] = toCanvasZ(shape.x, shape.y);
-              const color = shape.color || COLORS.primary;
-              const isSelected = selectedShapeId === shape.id;
-              const isGroupSelected = selectedElements.some(id => id === shape.id);
-              const shapeOpacity = typeof shape.fillOpacity === 'number' ? shape.fillOpacity : defaultFillOpacity;
-              const shapeMaskOpacity = typeof shape.maskOpacity === 'number' ? shape.maskOpacity : 0;
-              return (
-                <ShapeWithOutline
-                  key={shape.id}
-                  type={mappedType}
-                  x={x}
-                  y={y}
-                  size={mappedType === 'square' ? 64 * (shape.scale || 1) * zoom : 36 * (shape.scale || 1) * zoom}
-                  fillOpacity={shapeOpacity}
-                  maskOpacity={shapeMaskOpacity}
-                  color={color}
-                  strokeColor={(isSelected || isGroupSelected) ? (isSelected ? '#FFD700' : '#4CC674') : color}
-                  strokeWidth={(isSelected || isGroupSelected) ? (isSelected ? 4 : 3) : 2}
-                  sides={mappedSides}
-                  rotation={shape.rotation || 0}
-                  draggable
-                  onDragEnd={e => {
-                    const { x: newX, y: newY } = e.target.position();
-                    // Converter de canvas para lógica considerando zoom
-                    const [lx, ly] = fromCanvasZoom(newX, newY, zoom, viewportCenter);
-                    onUpdateShape(shape.id, { ...shape, x: lx, y: ly });
-                  }}
-                  onClick={evt => {
-                    handleShapeClick(shape.id, evt);
-                    handleElementSelect(shape.id, 'shape', evt);
-                  }}
-                />
-              );
-            })}
-          {/* Linhas não agrupadas (ajustadas para o zoom) */}
-          {Array.isArray(ungroupedLines) && ungroupedLines.map(line => {
-            const selected = isElementSelected(line.id);
-            let dash = [];
-            if (line.isDashed) {
-              const dashLength = typeof line.dashLength === 'number' ? line.dashLength : 12;
-              const dashSpacing = typeof line.dashSpacing === 'number' ? line.dashSpacing : 8;
-              dash = [dashLength, dashSpacing];
-            }
+<Layer>
+          {/* Grupos (ajustados para o zoom) */}
+          {Array.isArray(groups) && groups.map(group => {
+            const [groupCanvasX, groupCanvasY] = toCanvasZ(group.x || 0, group.y || 0);
+            const groupRotation = group.rotation || 0;
+            const groupScale = group.scale || 1;
+
             return (
-              <Group key={line.id + '-hitbox'}>
-                <Line
-                  key={line.id}
-                  points={[
-                    ...toCanvasZ(line.x1, line.y1),
-                    ...toCanvasZ(line.x2, line.y2)
-                  ]}
-                  stroke={selected ? '#FFD700' : COLORS.secondary}
-                  strokeWidth={selected ? 4 : (line.strokeWidth || 2)}
-                  opacity={typeof line.opacity === 'number' ? line.opacity : 0.8}
-                  dash={dash}
-                  onClick={(e) => { handleLineClick(line.id, e); }}
-                  hitStrokeWidth={24}
-                />
+              <Group
+                key={group.id}
+                x={groupCanvasX}
+                y={groupCanvasY}
+                rotation={groupRotation}
+                scaleX={groupScale}
+                scaleY={groupScale}
+                draggable
+                onDragEnd={e => {
+                  let { x: newX, y: newY } = e.target.position();
+                  if (settings.snapToGrid && settings.showGrid) {
+                    const divisions = settings.gridDivisions || 4;
+                    const nearest = getNearestGridPoint(newX, newY, divisions);
+                    newX = nearest.canvas[0];
+                    newY = nearest.canvas[1];
+                  }
+                  const [lx, ly] = fromCanvasZoom(newX, newY, zoom, viewportCenter);
+                  if (onUpdateGroup) {
+                    onUpdateGroup(group.id, { x: lx, y: ly });
+                  }
+                }}
+                onClick={evt => {
+                  handleGroupClick(group.id, evt);
+                  handleElementSelect(group.id, 'group', evt);
+                }}
+              >
+                {group.children.map(child => {
+                  if (child.type === 'shape') {
+                    const shape = shapes.find(s => s.id === child.id);
+                    if (!shape) return null;
+                    const typeLower = String(shape.type).toLowerCase();
+                    if (["losango", "diamond"].includes(typeLower)) {
+                      // As coordenadas x e y da forma devem ser relativas ao centro do grupo
+                      const xRelativeToGroup = shape.x - (group.x || 0);
+                      const yRelativeToGroup = shape.y - (group.y || 0);
+                      const [x, y] = toCanvasZ(xRelativeToGroup, yRelativeToGroup);
+                      const color = COLORS.primary;
+                      const isSelected = selectedShapeId === shape.id;
+                      const isGroupSelected = selectedElements.some(id => id === shape.id);
+                      const shapeOpacity = typeof shape.fillOpacity === 'number' ? shape.fillOpacity : defaultFillOpacity;
+                      const shapeMaskOpacity = typeof shape.maskOpacity === 'number' ? shape.maskOpacity : 0;
+                      const scale = shape.scale || 1;
+                      const h = 124 * scale * zoom;
+                      const w = 62 * scale * zoom;
+                      const rotation = shape.rotation || 0;
+                      return (
+                        <React.Fragment key={shape.id}>
+                          <Group x={x} y={y} rotation={rotation}>
+                            {shapeMaskOpacity > 0 && (
+                              <Line
+                                points={[0, -h/2, w/2, 0, 0, h/2, -w/2, 0]}
+                                closed
+                                fill="#000"
+                                stroke="#000"
+                                strokeWidth={0}
+                                opacity={shapeMaskOpacity}
+                                onClick={evt => {
+                                  handleShapeClick(shape.id, evt);
+                                  handleElementSelect(shape.id, 'shape', evt);
+                                }}
+                                listening={true}
+                              />
+                            )}
+                            <Line
+                              points={[0, -h/2, w/2, 0, 0, h/2, -w/2, 0]}
+                              closed
+                              stroke={isSelected ? '#FFD700' : isGroupSelected ? '#4CC674' : color}
+                              strokeWidth={isSelected ? 4 : isGroupSelected ? 3 : 2}
+                              fill={undefined}
+                              opacity={1}
+                              onClick={evt => {
+                                handleShapeClick(shape.id, evt);
+                                handleElementSelect(shape.id, 'shape', evt);
+                              }}
+                            />
+                            {shapeOpacity > 0 && (
+                              <Line
+                                points={[0, -h/2, w/2, 0, 0, h/2, -w/2, 0]}
+                                closed
+                                fill={color}
+                                stroke={color}
+                                strokeWidth={0}
+                                opacity={shapeOpacity}
+                                onClick={evt => {
+                                  handleShapeClick(shape.id, evt);
+                                  handleElementSelect(shape.id, 'shape', evt);
+                                }}
+                              />
+                            )}
+                          </Group>
+                        </React.Fragment>
+                      );
+                    }
+                    let mappedType = shape.type;
+                    let mappedSides = undefined;
+                    if (["triangle", "triangulo"].includes(typeLower)) {
+                      mappedType = "polygon";
+                      mappedSides = 3;
+                    } else if (["pentagono", "pentagon"].includes(typeLower)) {
+                      mappedType = "polygon";
+                      mappedSides = 5;
+                    } else if (["hexagono", "hexagon"].includes(typeLower)) {
+                      mappedType = "polygon";
+                      mappedSides = 6;
+                    } else if (["square"].includes(typeLower)) {
+                      mappedType = "square";
+                      mappedSides = undefined;
+                    } else if (["circle"].includes(typeLower)) {
+                      mappedType = "circle";
+                      mappedSides = undefined;
+                    }
+                    // As coordenadas x e y da forma devem ser relativas ao centro do grupo
+                    const xRelativeToGroup = shape.x - (group.x || 0);
+                    const yRelativeToGroup = shape.y - (group.y || 0);
+                    const [x, y] = toCanvasZ(xRelativeToGroup, yRelativeToGroup);
+                    const color = shape.color || COLORS.primary;
+                    const isSelected = selectedShapeId === shape.id;
+                    const isGroupSelected = selectedElements.some(id => id === shape.id);
+                    const shapeOpacity = typeof shape.fillOpacity === 'number' ? shape.fillOpacity : defaultFillOpacity;
+                    const shapeMaskOpacity = typeof shape.maskOpacity === 'number' ? shape.maskOpacity : 0;
+                    return (
+                      <ShapeWithOutline
+                        key={shape.id}
+                        type={mappedType}
+                        x={x}
+                        y={y}
+                        size={mappedType === 'square' ? 64 * (shape.scale || 1) * zoom : 36 * (shape.scale || 1) * zoom}
+                        fillOpacity={shapeOpacity}
+                        maskOpacity={shapeMaskOpacity}
+                        color={color}
+                        strokeColor={(isSelected || isGroupSelected) ? (isSelected ? '#FFD700' : '#4CC674') : color}
+                        strokeWidth={(isSelected || isGroupSelected) ? (isSelected ? 4 : 3) : 2}
+                        sides={mappedSides}
+                        rotation={shape.rotation || 0}
+                        draggable={false} // Desabilitar draggable para shapes dentro de grupos
+                        onDragEnd={null} // Remover onDragEnd para shapes dentro de grupos
+                        onClick={evt => {
+                          handleShapeClick(shape.id, evt);
+                          handleElementSelect(shape.id, 'shape', evt);
+                        }}
+                      />
+                    );
+                  } else if (child.type === 'line') {
+                    const line = lines.find(l => l.id === child.id);
+                    if (!line) return null;
+                    const selected = isElementSelected(line.id);
+                    let dash = [];
+                    if (line.isDashed) {
+                      const dashLength = typeof line.dashLength === 'number' ? line.dashLength : 12;
+                      const dashSpacing = typeof line.dashSpacing === 'number' ? line.dashSpacing : 8;
+                      dash = [dashLength, dashSpacing];
+                    }
+                    return (
+                      <Group key={line.id + '-hitbox'}>
+                        <Line
+                          key={line.id}
+                          points={[
+                            // As coordenadas x1, y1, x2, y2 da linha devem ser relativas ao centro do grupo
+                            ...toCanvasZ(line.x1 - (group.x || 0), line.y1 - (group.y || 0)),
+                            ...toCanvasZ(line.x2 - (group.x || 0), line.y2 - (group.y || 0))
+                          ]}
+                          stroke={selected ? '#FFD700' : COLORS.secondary}
+                          strokeWidth={selected ? 4 : (line.strokeWidth || 2)}
+                          opacity={typeof line.opacity === 'number' ? line.opacity : 0.8}
+                          dash={dash}
+                          onClick={(e) => { handleLineClick(line.id, e); }}
+                          hitStrokeWidth={24}
+                        />
+                      </Group>
+                    );
+                  }
+                  return null;
+                })}
               </Group>
             );
           })}
@@ -753,6 +899,7 @@ export default function FractalCanvas({
           maskValue={popoverShape.maskOpacity ?? 0}
           onChange={val => onUpdateShape(popoverShape.id, { fillOpacity: val })}
           onChangeMask={val => onUpdateShape(popoverShape.id, { maskOpacity: val })}
+          onModeChange={mode => setSliderValue(mode === 'opacity' ? 0 : 1)}
           onClose={closeEditPopover}
           layer={popoverShape.layer}
           onMoveLayer={handleMoveLayer}
@@ -769,30 +916,57 @@ export default function FractalCanvas({
       )}
 
       {/* Visualização do zoom e área no canto superior direito */}
-      <div style={{
-        position: 'absolute',
-        top: 16,
-        right: 24,
-        background: 'transparent', // removido o fundo
-        border: '2px solid #4CC674',
-        borderRadius: 10,
-        padding: '10px 18px',
-        color: '#7DF9A6',
-        fontFamily: 'Rajdhani, monospace',
-        fontSize: 16,
-        zIndex: 100,
-        minWidth: 160,
-        textAlign: 'right',
-        userSelect: 'none',
-        boxShadow: 'none',
-      }}>
-        <div style={{fontWeight: 700, fontSize: 18}}>Zoom: {zoom}x</div>
-        <div style={{fontSize: 15}}>
-          Área: {(CANVAS_SIZE/zoom).toFixed(0)} × {(CANVAS_SIZE/zoom).toFixed(0)} px
+      {zoomEnabled && (
+        <div style={{
+          position: 'absolute',
+          top: 16,
+          right: 24,
+          background: 'transparent',
+          border: '2px solid #4CC674',
+          borderRadius: 10,
+          padding: '10px 18px',
+          color: '#7DF9A6',
+          fontFamily: 'Rajdhani, monospace',
+          fontSize: 16,
+          zIndex: 100,
+          minWidth: 160,
+          textAlign: 'right',
+          userSelect: 'none',
+          boxShadow: 'none',
+        }}>
+          <div style={{fontWeight: 700, fontSize: 18}}>Zoom: {zoom}x</div>
+          <div style={{fontSize: 15}}>
+            Área: {(CANVAS_SIZE/zoom).toFixed(0)} × {(CANVAS_SIZE/zoom).toFixed(0)} px
+          </div>
+          <div style={{fontSize: 14, opacity: 0.8}}>
+            Centro: x={viewportCenter.x}, y={viewportCenter.y}
+          </div>
         </div>
-        <div style={{fontSize: 14, opacity: 0.8}}>
-          Centro: x={viewportCenter.x}, y={viewportCenter.y}
-        </div>
+      )}
+
+      {/* Checkbox de zoom minimalista, totalmente fora do canvas, alinhada à borda esquerda da coluna */}
+      <div style={{ position: 'absolute', right: '100%', bottom: 10, marginRight: 8, zIndex: 120 }}>
+        <label style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
+          background: '#181A20EE', border: '2px solid #4CC674', borderRadius: 7,
+          padding: '5px 7px 4px 7px', color: '#7DF9A6', fontWeight: 700, fontSize: 13,
+          cursor: 'pointer', userSelect: 'none', boxShadow: '0 1px 4px #000A',
+          minWidth: 30
+        }}>
+          <input
+            type="checkbox"
+            checked={zoomEnabled}
+            onChange={e => setZoomEnabled(e.target.checked)}
+            style={{
+              width: 15, height: 15, accentColor: '#4CC674', margin: 0,
+              border: '2px solid #4CC674', borderRadius: 4, background: '#222',
+              boxShadow: '0 1px 3px #0008', cursor: 'pointer',
+              transition: 'accent-color 0.2s',
+            }}
+            aria-label="Ativar/desativar zoom"
+          />
+          <span style={{ display: 'block', lineHeight: 1.1, paddingTop: 2, fontFamily: 'Rajdhani, monospace', fontWeight: 700, color: '#7DF9A6', fontSize: 12, letterSpacing: 1 }}>Zoom</span>
+        </label>
       </div>
     </div>
   );

@@ -13,7 +13,8 @@ export default function ShapePopover({
   canMoveUp, 
   canMoveDown,
   maskValue = 0,
-  onChangeMask
+  onChangeMask,
+  onModeChange // Nova prop
 }) {
   const ref = useRef();
   // Novo: estado local para alternância Opacity/Dark
@@ -62,7 +63,7 @@ export default function ShapePopover({
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
           <button
-            onClick={() => setMode('opacity')}
+            onClick={() => { setMode('opacity'); onModeChange('opacity'); }}
             style={{
               background: mode === 'opacity' ? '#4CC674' : 'transparent',
               color: mode === 'opacity' ? '#181A20' : '#7DF9A6',
@@ -78,7 +79,7 @@ export default function ShapePopover({
             Opacity
           </button>
           <button
-            onClick={() => setMode('dark')}
+            onClick={() => { setMode('dark'); onModeChange('dark'); }}
             style={{
               background: mode === 'dark' ? '#4CC674' : 'transparent',
               color: mode === 'dark' ? '#181A20' : '#7DF9A6',

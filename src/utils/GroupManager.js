@@ -29,6 +29,7 @@ export function createGroup(options = {}) {
     locked: false,
     expanded: true,
     transformMatrix: [1, 0, 0, 1, 0, 0], // Identidade por padrão [a, b, c, d, tx, ty]
+    rotation: 0, // Adiciona propriedade de rotação para o grupo
     createdAt: Date.now(),
   };
 }
@@ -156,11 +157,28 @@ export function createGroupFromSelection(elements, options = {}) {
   // Cria um nome automático baseado na quantidade de elementos
   const defaultName = `Grupo de ${elements.length} ${elements.length === 1 ? 'elemento' : 'elementos'}`;
   
-  // Cria o novo grupo com os elementos selecionados
+  // Calcula o centro médio dos elementos selecionados
+  let totalX = 0;
+  let totalY = 0;
+  elements.forEach(elem => {
+    if (elem.type === 'shape') {
+      totalX += elem.x || 0;
+      totalY += elem.y || 0;
+    } else if (elem.type === 'line') {
+      totalX += (elem.x1 + elem.x2) / 2;
+      totalY += (elem.y1 + elem.y2) / 2;
+    }
+  });
+  const centerX = elements.length > 0 ? totalX / elements.length : 0;
+  const centerY = elements.length > 0 ? totalY / elements.length : 0;
+
+  // Cria o novo grupo com os elementos selecionados e o centro calculado
   return createGroup({
     name: options.name || defaultName,
     color: options.color,
-    children: elementIds
+    children: elementIds,
+    x: centerX, // Adiciona a coordenada X do centro do grupo
+    y: centerY  // Adiciona a coordenada Y do centro do grupo
   });
 }
 

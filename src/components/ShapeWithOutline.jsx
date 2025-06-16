@@ -22,7 +22,7 @@ export default function ShapeWithOutline({
     stroke: strokeColor,
     strokeWidth: 2,
     fill: undefined,
-    opacity: 1 - fillOpacity,
+    opacity: 1,
     rotation,
     ...rest
   };
