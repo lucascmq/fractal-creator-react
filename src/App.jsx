@@ -4,6 +4,7 @@ import FractalCanvas from './components/FractalCanvas';
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import { createGroup, deleteGroup, addChildToGroup, removeChildFromGroup, createGroupFromSelection } from './utils/GroupManager';
+import { useZoom } from './hooks/useZoom';
 
 function App() {  // Estados globais para linhas e formas
   const [lines, setLines] = useState([]);
@@ -27,6 +28,18 @@ function App() {  // Estados globais para linhas e formas
     guideGridSize: 125,
     centerText: '' // frase central vazia
   });
+
+  // Estado de zoom e pan centralizado
+  const {
+    zoom,
+    setZoom,
+    viewportCenter,
+    setViewportCenter,
+    zoomIn,
+    zoomOut,
+    pan,
+    resetZoom
+  } = useZoom(1, { x: 0, y: 0 });
 
   // Efeito para controlar scroll da página durante edição
   useEffect(() => {
@@ -61,6 +74,11 @@ function App() {  // Estados globais para linhas e formas
 
   // Adiciona uma linha ao estado global
   const handleAddLine = (line) => {
+    // Log para depuração: mostra as coordenadas da linha e o estado do viewport
+    console.log('[DEBUG] Criando linha:', line, {
+      zoom,
+      viewportCenter
+    });
     setLines(prev => [
       ...prev,
       { id: Date.now() + Math.random(), ...line }
@@ -210,6 +228,13 @@ function App() {  // Estados globais para linhas e formas
             onAddShape={handleAddShape} 
             settings={settings}
             onSettingsChange={handleSettingsChange}
+            viewportCenter={viewportCenter}
+            zoom={zoom}
+            pan={pan}
+            setViewportCenter={setViewportCenter}
+            zoomIn={zoomIn}
+            zoomOut={zoomOut}
+            resetZoom={resetZoom}
           />
         </aside>
         <main className="canvas-column">
@@ -219,33 +244,41 @@ function App() {  // Estados globais para linhas e formas
             groups={groups}
             settings={settings}
             onUpdateShape={handleUpdateShape}
-            onUpdateLine={handleUpdateLine} // <--- Adicionado!
+            onUpdateLine={handleUpdateLine}
             selectedShapeId={selectedShapeId}
             setSelectedShapeId={setSelectedShapeId}
             isEditingShape={isEditingShape}
             setIsEditingShape={setIsEditingShape}
             selectedElements={selectedElements}
             onToggleElementSelection={handleToggleElementSelection}
-            onClearSelection={handleClearSelection}
+            viewportCenter={viewportCenter}
+            zoom={zoom}
+            pan={pan}
+            setViewportCenter={setViewportCenter}
+            zoomIn={zoomIn}
+            zoomOut={zoomOut}
+            resetZoom={resetZoom}
           />
         </main>
-        <aside className="editor-column" tabIndex="0">
-          <RightPanel
-            lines={lines}
-            shapes={shapes}
-            groups={groups}
-            onUpdateLine={handleUpdateLine}
-            onUpdateShape={handleUpdateShape}
+        <aside className="right-column">
+          <RightPanel 
+            onClearAll={handleClearAll}
+            onResetView={resetZoom}
             onDeleteLine={handleDeleteLine}
             onDeleteShape={handleDeleteShape}
-            selectedShapeId={selectedShapeId}
-            selectedElements={selectedElements}
-            onToggleElementSelection={handleToggleElementSelection}
-            onCreateGroup={handleCreateGroupFromSelection}
             onDeleteGroup={handleDeleteGroup}
+            onCreateGroup={handleCreateGroup}
+            onCreateGroupFromSelection={handleCreateGroupFromSelection}
             onAddToGroup={handleAddToGroup}
             onRemoveFromGroup={handleRemoveFromGroup}
             onUpdateGroup={handleUpdateGroup}
+            onUpdateLine={handleUpdateLine}
+            onUpdateShape={handleUpdateShape}
+            selectedElements={selectedElements}
+            onClearSelection={handleClearSelection}
+            groups={groups}
+            shapes={shapes}
+            lines={lines}
           />
         </aside>
       </div>

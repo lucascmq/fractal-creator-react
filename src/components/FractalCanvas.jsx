@@ -6,7 +6,7 @@ import { Stage, Layer, Text } from 'react-konva';
 import { COLORS } from '../utils/colors';
 import { Line, Group } from 'react-konva';
 import { Circle, Rect, RegularPolygon } from 'react-konva';
-import ShapeWithOutline from './ShapeWithOutline';
+import { Diamond, FigureCircle, FigureSquare, FigurePolygon } from './FigureLibrary';
 import ShapePopover from './ShapePopover';
 import LinePopover from './LinePopover';
 import { useKeyboardSelection } from '../hooks/useKeyboardSelection';
@@ -20,11 +20,13 @@ import {
   generateBorderLines
 } from '../utils/gridUtils';
 import { toCanvasZoom, fromCanvasZoom } from '../utils/zoomUtils';
+import GridLayer from './GridLayer';
+import SnapMarker from './SnapMarker';
 
 export default function FractalCanvas({ 
   lines = [], 
   shapes = [],
-  groups = [], // Adiciona props de grupos
+  groups = [],
   settings = {},
   onUpdateShape, // Recebe função do App para atualizar shape
   onUpdateLine, // NOVO: para atualizar linha
@@ -35,7 +37,16 @@ export default function FractalCanvas({
   setIsEditingShape,
   selectedElements = [], // Adiciona array de elementos selecionados
   onToggleElementSelection = () => {}, // Função para alternar seleção
-  onClearSelection = () => {} // Função para limpar seleção
+  onClearSelection = () => {}, // Função para limpar seleção
+  // Props de zoom/pan centralizados no App
+  zoom,
+  setZoom,
+  viewportCenter,
+  setViewportCenter,
+  zoomIn,
+  zoomOut,
+  pan,
+  resetZoom
 }) {  // Estado para controlar o slider de alternância entre Opacity e Dark
   const [sliderValue, setSliderValue] = useState(0);
   // Canvas quadrado fixo
@@ -62,9 +73,6 @@ export default function FractalCanvas({
 
   // Estado para exibir controles de zoom
   const [showZoomControls, setShowZoomControls] = useState(false);
-  // Estado do zoom e viewport
-  const [zoom, setZoom] = useState(1); // 1x, 2x, 4x, etc
-  const [viewportCenter, setViewportCenter] = useState({ x: 0, y: 0 }); // centro lógico
 
   // Substitui toCanvas por toCanvasZoom em todo o render
   // Helper para usar sempre o zoom/viewport atuais
@@ -164,12 +172,9 @@ export default function FractalCanvas({
   const [hoverArrow, setHoverArrow] = useState(false);
   // Estado para linha selecionada
   const [selectedLineId, setSelectedLineId] = useState(null);
-  // DEBUG: log para acompanhar mudanças
-  React.useEffect(() => {
-    if (selectedLineId) {
-      console.log('selectedLineId mudou:', selectedLineId);
-    }
-  }, [selectedLineId]);
+
+  // DEBUG: Verifica se as shapes estão chegando corretamente
+  console.log('Shapes recebidas no FractalCanvas:', shapes);
 
   // useEffect para fechar o menu com a tecla ESC
   useEffect(() => {
@@ -611,27 +616,27 @@ export default function FractalCanvas({
         >
           {/* Linha de zoom in/out */}
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <button onClick={handleZoomOut} style={{ width: 38, height: 38, borderRadius: 8, background: 'transparent', border: '2px solid #4CC674', color: '#7DF9A6', fontSize: 22, fontWeight: 700, cursor: 'pointer' }}>–</button>
+            <button onClick={zoomOut} style={{ width: 38, height: 38, borderRadius: 8, background: 'transparent', border: '2px solid #4CC674', color: '#7DF9A6', fontSize: 22, fontWeight: 700, cursor: 'pointer' }}>–</button>
             <span style={{ color: '#7DF9A6', fontSize: 18, fontFamily: 'Orbitron, monospace', minWidth: 60, textAlign: 'center' }}>Zoom: {zoom}x</span>
-            <button onClick={handleZoomIn} style={{ width: 38, height: 38, borderRadius: 8, background: 'transparent', border: '2px solid #4CC674', color: '#7DF9A6', fontSize: 22, fontWeight: 700, cursor: 'pointer' }}>+</button>
+            <button onClick={zoomIn} style={{ width: 38, height: 38, borderRadius: 8, background: 'transparent', border: '2px solid #4CC674', color: '#7DF9A6', fontSize: 22, fontWeight: 700, cursor: 'pointer' }}>+</button>
           </div>
           {/* Navegação (pan) */}
           <div style={{ display: 'grid', gridTemplateColumns: '38px 38px 38px', gridTemplateRows: '38px 38px 38px', gap: 4 }}>
             <div />
-            <button onClick={() => handlePan(0, -50 / zoom)} style={{ gridColumn: 2, gridRow: 1, ...panBtnStyle }}>↑</button>
+            <button onClick={() => pan(0, -50 / zoom)} style={{ gridColumn: 2, gridRow: 1, ...panBtnStyle }}>↑</button>
             <div />
-            <button onClick={() => handlePan(-50 / zoom, 0)} style={{ gridColumn: 1, gridRow: 2, ...panBtnStyle }}>←</button>
+            <button onClick={() => pan(-50 / zoom, 0)} style={{ gridColumn: 1, gridRow: 2, ...panBtnStyle }}>←</button>
             <div />
-            <button onClick={() => handlePan(50 / zoom, 0)} style={{ gridColumn: 3, gridRow: 2, ...panBtnStyle }}>→</button>
+            <button onClick={() => pan(50 / zoom, 0)} style={{ gridColumn: 3, gridRow: 2, ...panBtnStyle }}>→</button>
             <div />
-            <button onClick={() => handlePan(0, 50 / zoom)} style={{ gridColumn: 2, gridRow: 3, ...panBtnStyle }}>↓</button>
+            <button onClick={() => pan(0, 50 / zoom)} style={{ gridColumn: 2, gridRow: 3, ...panBtnStyle }}>↓</button>
             <div />
           </div>
           {/* Área lógica visível */}
           <div style={{ color: '#7DF9A6', fontSize: 14, fontFamily: 'Rajdhani, monospace', marginTop: 6 }}>
             Centro: x={viewportCenter.x}, y={viewportCenter.y}
           </div>
-          <button onClick={handleResetZoom} style={{ marginTop: 8, width: 120, height: 32, borderRadius: 8, background: 'transparent', border: '2px solid #4CC674', color: '#7DF9A6', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>Resetar Zoom</button>
+          <button onClick={resetZoom} style={{ marginTop: 8, width: 120, height: 32, borderRadius: 8, background: 'transparent', border: '2px solid #4CC674', color: '#7DF9A6', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>Resetar Zoom</button>
         </div>
       )}
 
@@ -643,50 +648,13 @@ export default function FractalCanvas({
         onClick={handleStageClick}
         ref={containerRef}
       >
+        {/* Modularização: GridLayer */}
+        <GridLayer zoom={zoom} viewportCenter={viewportCenter} settings={settings} toCanvasZ={toCanvasZ} />
         <Layer>
-          {/* Linhas do grid principal (ajustadas para o zoom) - condicional ao settings.showGrid */}
-          {settings.showGrid && mainGridLines}
-          {/* Linhas de borda do grid - sempre visíveis */}
-          {borderLines}
-          {/* Linhas de divisão internas (se houver) */}
-          {divisionLines}
           {/* Marcador de snap (se ativo) */}
-          {snapMarker && (
-            <>
-              <Circle
-                x={snapMarker.x}
-                y={snapMarker.y}
-                radius={4}
-                fill="#FFD700"
-                stroke="#000"
-                strokeWidth={1}
-              />
-              {/* Box de coordenadas do snap */}
-              <Rect
-                x={snapMarker.x + 10}
-                y={snapMarker.y - 24}
-                width={80}
-                height={28}
-                fill="#181A20EE"
-                stroke="#4CC674"
-                strokeWidth={2}
-                cornerRadius={7}
-                shadowBlur={6}
-                shadowColor={'#000'}
-              />
-              <Text
-                x={snapMarker.x + 18}
-                y={snapMarker.y - 18}
-                text={`x: ${snapMarker.logical.x}  y: ${snapMarker.logical.y}`}
-                fontSize={15}
-                fontFamily="Rajdhani, monospace"
-                fill="#7DF9A6"
-                fontStyle="bold"
-              />
-            </>
-          )}
+          <SnapMarker snapMarker={snapMarker} />
         </Layer>
-<Layer>
+        <Layer>
           {/* Grupos (ajustados para o zoom) */}
           {Array.isArray(groups) && groups.map(group => {
             const [groupCanvasX, groupCanvasY] = toCanvasZ(group.x || 0, group.y || 0);
@@ -702,7 +670,18 @@ export default function FractalCanvas({
                 scaleX={groupScale}
                 scaleY={groupScale}
                 draggable
+                onDragMove={e => {
+                  if (settings.snapToGrid && settings.showGrid) {
+                    const { x: dragX, y: dragY } = e.target.position();
+                    const divisions = settings.gridDivisions || 4;
+                    const nearest = getNearestGridPoint(dragX, dragY, divisions);
+                    setSnapMarker({ x: nearest.canvas[0], y: nearest.canvas[1], logical: nearest.logical });
+                  } else {
+                    setSnapMarker(null);
+                  }
+                }}
                 onDragEnd={e => {
+                  setSnapMarker(null);
                   let { x: newX, y: newY } = e.target.position();
                   if (settings.snapToGrid && settings.showGrid) {
                     const divisions = settings.gridDivisions || 4;
@@ -868,6 +847,323 @@ export default function FractalCanvas({
                   return null;
                 })}
               </Group>
+            );
+          })}
+        </Layer>
+        <Layer>
+          {/* Renderiza shapes não agrupadas */}
+          {ungroupedShapes.map(shape => {
+            const typeLower = String(shape.type).toLowerCase();
+            const [x, y] = toCanvasZ(shape.x, shape.y);
+            const color = shape.color || COLORS.primary;
+            const isSelected = selectedShapeId === shape.id;
+            const isMultiSelected = selectedElements.some(id => id === shape.id);
+            const shapeOpacity = typeof shape.fillOpacity === 'number' ? shape.fillOpacity : defaultFillOpacity;
+            const shapeMaskOpacity = typeof shape.maskOpacity === 'number' ? shape.maskOpacity : 0;
+            const scale = shape.scale || 1;
+            const rotation = shape.rotation || 0;
+            if (["losango", "diamond"].includes(typeLower)) {
+              return (
+                <Diamond
+                  key={shape.id}
+                  x={x}
+                  y={y}
+                  scale={scale}
+                  zoom={zoom}
+                  color={color}
+                  fillOpacity={shapeOpacity}
+                  maskOpacity={shapeMaskOpacity}
+                  rotation={rotation}
+                  isSelected={isSelected}
+                  isMultiSelected={isMultiSelected}
+                  draggable
+                  onDragMove={e => {
+                    if (settings.snapToGrid && settings.showGrid) {
+                      const { x: dragX, y: dragY } = e.target.position();
+                      const divisions = settings.gridDivisions || 4;
+                      const nearest = getNearestGridPoint(dragX, dragY, divisions);
+                      setSnapMarker({ x: nearest.canvas[0], y: nearest.canvas[1], logical: nearest.logical });
+                    } else {
+                      setSnapMarker(null);
+                    }
+                  }}
+                  onDragEnd={e => {
+                    setSnapMarker(null);
+                    let { x: newX, y: newY } = e.target.position();
+                    if (settings.snapToGrid && settings.showGrid) {
+                      const divisions = settings.gridDivisions || 4;
+                      const nearest = getNearestGridPoint(newX, newY, divisions);
+                      newX = nearest.canvas[0];
+                      newY = nearest.canvas[1];
+                    }
+                    const [lx, ly] = fromCanvasZoom(newX, newY, zoom, viewportCenter);
+                    if (onUpdateShape) {
+                      onUpdateShape(shape.id, { x: lx, y: ly });
+                    }
+                  }}
+                  onClick={evt => {
+                    handleShapeClick(shape.id, evt);
+                    handleElementSelect(shape.id, 'shape', evt);
+                  }}
+                />
+              );
+            }
+            if (["circle"].includes(typeLower)) {
+              return (
+                <FigureCircle
+                  key={shape.id}
+                  x={x}
+                  y={y}
+                  size={36 * scale * zoom}
+                  color={color}
+                  fillOpacity={shapeOpacity}
+                  maskOpacity={shapeMaskOpacity}
+                  rotation={rotation}
+                  isSelected={isSelected}
+                  isMultiSelected={isMultiSelected}
+                  draggable
+                  onDragMove={e => {
+                    if (settings.snapToGrid && settings.showGrid) {
+                      const { x: dragX, y: dragY } = e.target.position();
+                      const divisions = settings.gridDivisions || 4;
+                      const nearest = getNearestGridPoint(dragX, dragY, divisions);
+                      setSnapMarker({ x: nearest.canvas[0], y: nearest.canvas[1], logical: nearest.logical });
+                    } else {
+                      setSnapMarker(null);
+                    }
+                  }}
+                  onDragEnd={e => {
+                    setSnapMarker(null);
+                    let { x: newX, y: newY } = e.target.position();
+                    if (settings.snapToGrid && settings.showGrid) {
+                      const divisions = settings.gridDivisions || 4;
+                      const nearest = getNearestGridPoint(newX, newY, divisions);
+                      newX = nearest.canvas[0];
+                      newY = nearest.canvas[1];
+                    }
+                    const [lx, ly] = fromCanvasZoom(newX, newY, zoom, viewportCenter);
+                    if (onUpdateShape) {
+                      onUpdateShape(shape.id, { x: lx, y: ly });
+                    }
+                  }}
+                  onClick={evt => {
+                    handleShapeClick(shape.id, evt);
+                    handleElementSelect(shape.id, 'shape', evt);
+                  }}
+                />
+              );
+            }
+            if (["square"].includes(typeLower)) {
+              return (
+                <FigureSquare
+                  key={shape.id}
+                  x={x}
+                  y={y}
+                  size={64 * scale * zoom}
+                  color={color}
+                  fillOpacity={shapeOpacity}
+                  maskOpacity={shapeMaskOpacity}
+                  rotation={rotation}
+                  isSelected={isSelected}
+                  isMultiSelected={isMultiSelected}
+                  draggable
+                  onDragMove={e => {
+                    if (settings.snapToGrid && settings.showGrid) {
+                      const { x: dragX, y: dragY } = e.target.position();
+                      const divisions = settings.gridDivisions || 4;
+                      const nearest = getNearestGridPoint(dragX, dragY, divisions);
+                      setSnapMarker({ x: nearest.canvas[0], y: nearest.canvas[1], logical: nearest.logical });
+                    } else {
+                      setSnapMarker(null);
+                    }
+                  }}
+                  onDragEnd={e => {
+                    setSnapMarker(null);
+                    let { x: newX, y: newY } = e.target.position();
+                    if (settings.snapToGrid && settings.showGrid) {
+                      const divisions = settings.gridDivisions || 4;
+                      const nearest = getNearestGridPoint(newX, newY, divisions);
+                      newX = nearest.canvas[0];
+                      newY = nearest.canvas[1];
+                    }
+                    const [lx, ly] = fromCanvasZoom(newX, newY, zoom, viewportCenter);
+                    if (onUpdateShape) {
+                      onUpdateShape(shape.id, { x: lx, y: ly });
+                    }
+                  }}
+                  onClick={evt => {
+                    handleShapeClick(shape.id, evt);
+                    handleElementSelect(shape.id, 'shape', evt);
+                  }}
+                />
+              );
+            }
+            if (["triangle", "triangulo"].includes(typeLower)) {
+              return (
+                <FigurePolygon
+                  key={shape.id}
+                  x={x}
+                  y={y}
+                  size={36 * scale * zoom}
+                  sides={3}
+                  color={color}
+                  fillOpacity={shapeOpacity}
+                  maskOpacity={shapeMaskOpacity}
+                  rotation={rotation}
+                  isSelected={isSelected}
+                  isMultiSelected={isMultiSelected}
+                  onClick={evt => {
+                    handleShapeClick(shape.id, evt);
+                    handleElementSelect(shape.id, 'shape', evt);
+                  }}
+                />
+              );
+            }
+            if (["pentagono", "pentagon"].includes(typeLower)) {
+              return (
+                <FigurePolygon
+                  key={shape.id}
+                  x={x}
+                  y={y}
+                  size={36 * scale * zoom}
+                  sides={5}
+                  color={color}
+                  fillOpacity={shapeOpacity}
+                  maskOpacity={shapeMaskOpacity}
+                  rotation={rotation}
+                  isSelected={isSelected}
+                  isMultiSelected={isMultiSelected}
+                  draggable
+                  onDragMove={e => {
+                    if (settings.snapToGrid && settings.showGrid) {
+                      const { x: dragX, y: dragY } = e.target.position();
+                      const divisions = settings.gridDivisions || 4;
+                      const nearest = getNearestGridPoint(dragX, dragY, divisions);
+                      setSnapMarker({ x: nearest.canvas[0], y: nearest.canvas[1], logical: nearest.logical });
+                    } else {
+                      setSnapMarker(null);
+                    }
+                  }}
+                  onDragEnd={e => {
+                    setSnapMarker(null);
+                    let { x: newX, y: newY } = e.target.position();
+                    if (settings.snapToGrid && settings.showGrid) {
+                      const divisions = settings.gridDivisions || 4;
+                      const nearest = getNearestGridPoint(newX, newY, divisions);
+                      newX = nearest.canvas[0];
+                      newY = nearest.canvas[1];
+                    }
+                    const [lx, ly] = fromCanvasZoom(newX, newY, zoom, viewportCenter);
+                    if (onUpdateShape) {
+                      onUpdateShape(shape.id, { x: lx, y: ly });
+                    }
+                  }}
+                  onClick={evt => {
+                    handleShapeClick(shape.id, evt);
+                    handleElementSelect(shape.id, 'shape', evt);
+                  }}
+                />
+              );
+            }
+            if (["hexagono", "hexagon"].includes(typeLower)) {
+              return (
+                <FigurePolygon
+                  key={shape.id}
+                  x={x}
+                  y={y}
+                  size={36 * scale * zoom}
+                  sides={6}
+                  color={color}
+                  fillOpacity={shapeOpacity}
+                  maskOpacity={shapeMaskOpacity}
+                  rotation={rotation}
+                  isSelected={isSelected}
+                  isMultiSelected={isMultiSelected}
+                  draggable
+                  onDragMove={e => {
+                    if (settings.snapToGrid && settings.showGrid) {
+                      const { x: dragX, y: dragY } = e.target.position();
+                      const divisions = settings.gridDivisions || 4;
+                      const nearest = getNearestGridPoint(dragX, dragY, divisions);
+                      setSnapMarker({ x: nearest.canvas[0], y: nearest.canvas[1], logical: nearest.logical });
+                    } else {
+                      setSnapMarker(null);
+                    }
+                  }}
+                  onDragEnd={e => {
+                    setSnapMarker(null);
+                    let { x: newX, y: newY } = e.target.position();
+                    if (settings.snapToGrid && settings.showGrid) {
+                      const divisions = settings.gridDivisions || 4;
+                      const nearest = getNearestGridPoint(newX, newY, divisions);
+                      newX = nearest.canvas[0];
+                      newY = nearest.canvas[1];
+                    }
+                    const [lx, ly] = fromCanvasZoom(newX, newY, zoom, viewportCenter);
+                    if (onUpdateShape) {
+                      onUpdateShape(shape.id, { x: lx, y: ly });
+                    }
+                  }}
+                  onClick={evt => {
+                    handleShapeClick(shape.id, evt);
+                    handleElementSelect(shape.id, 'shape', evt);
+                  }}
+                />
+              );
+            }
+            return null;
+          })}
+          {/* Renderiza linhas não agrupadas */}
+          {ungroupedLines.map(line => {
+            const [x1, y1] = toCanvasZ(line.x1, line.y1);
+            const [x2, y2] = toCanvasZ(line.x2, line.y2);
+            const selected = isElementSelected(line.id);
+            let dash = [];
+            if (line.isDashed) {
+              const dashLength = typeof line.dashLength === 'number' ? line.dashLength : 12;
+              const dashSpacing = typeof line.dashSpacing === 'number' ? line.dashSpacing : 8;
+              dash = [dashLength, dashSpacing];
+            }
+            return (
+              <Line
+                key={line.id}
+                points={[x1, y1, x2, y2]}
+                stroke={selected ? '#FFD700' : COLORS.secondary}
+                strokeWidth={selected ? 4 : (line.strokeWidth || 2)}
+                opacity={typeof line.opacity === 'number' ? line.opacity : 0.8}
+                dash={dash}
+                draggable
+                onDragMove={e => {
+                  if (settings.snapToGrid && settings.showGrid) {
+                    const { x: dragX, y: dragY } = e.target.position();
+                    const divisions = settings.gridDivisions || 4;
+                    const nearest = getNearestGridPoint(dragX, dragY, divisions);
+                    setSnapMarker({ x: nearest.canvas[0], y: nearest.canvas[1], logical: nearest.logical });
+                  } else {
+                    setSnapMarker(null);
+                  }
+                }}
+                onDragEnd={e => {
+                  setSnapMarker(null);
+                  let { x: newX, y: newY } = e.target.position();
+                  if (settings.snapToGrid && settings.showGrid) {
+                    const divisions = settings.gridDivisions || 4;
+                    const nearest = getNearestGridPoint(newX, newY, divisions);
+                    newX = nearest.canvas[0];
+                    newY = nearest.canvas[1];
+                  }
+                  // Atualiza a linha para o novo ponto inicial/final (mantém o delta)
+                  const dx = newX - x1;
+                  const dy = newY - y1;
+                  const [lx1, ly1] = fromCanvasZoom(newX, newY, zoom, viewportCenter);
+                  const [lx2, ly2] = fromCanvasZoom(x2 + dx, y2 + dy, zoom, viewportCenter);
+                  if (onUpdateLine) {
+                    onUpdateLine(line.id, { x1: lx1, y1: ly1, x2: lx2, y2: ly2 });
+                  }
+                }}
+                onClick={e => handleLineClick(line.id, e)}
+                hitStrokeWidth={24}
+              />
             );
           })}
         </Layer>

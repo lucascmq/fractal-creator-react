@@ -2,7 +2,7 @@
 // Exibe opções de forma (círculo, quadrado, triângulo) e inputs para coordenadas e scale
 // Layout integrado: mostra os inputs ao lado da lista de formas
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const SHAPES = [
   { type: 'circle', label: 'Círculo', icon: '⚪' },
@@ -13,22 +13,32 @@ const SHAPES = [
   { type: 'hexagono', label: 'Hexágono', icon: '⬢' },
 ];
 
-export default function AddShapePanel({ onAdd, onCancel }) {
+export default function AddShapePanel({ onAdd, onCancel, viewportCenter, zoom }) {
   // Limites centrados
   const MIN = -250;
   const MAX = 250;
+  // Centraliza a forma no viewport atual e ajusta escala pelo zoom
+  const defaultScale = 4 / (zoom || 1);
   const [selected, setSelected] = useState(null);
-  const [x, setX] = useState(0);
-  const [y, setY] = useState(0);
-  const [scale, setScale] = useState(4); // valor padrão alterado para 4
+  const [x, setX] = useState(viewportCenter ? viewportCenter.x : 0);
+  const [y, setY] = useState(viewportCenter ? viewportCenter.y : 0);
+  const [scale, setScale] = useState(defaultScale);
   const [fillOpacity, setFillOpacity] = useState(0.5);
   const clamp = (val) => Math.max(MIN, Math.min(MAX, Number(val)));
+
+  // Sempre que viewportCenter ou zoom mudar, centraliza os inputs
+  useEffect(() => {
+    setX(viewportCenter ? viewportCenter.x : 0);
+    setY(viewportCenter ? viewportCenter.y : 0);
+    setScale(4 / (zoom || 1));
+  }, [viewportCenter, zoom]);
+
   const handleShapeSelect = (type) => {
     setSelected(type);
-    setX(0);
-    setY(0);
-    setScale(4); // valor padrão ao selecionar
-    setFillOpacity(0.5); // valor padrão ao selecionar
+    setX(viewportCenter ? viewportCenter.x : 0);
+    setY(viewportCenter ? viewportCenter.y : 0);
+    setScale(4 / (zoom || 1));
+    setFillOpacity(0.5);
   };
 
   const handleSubmit = () => {

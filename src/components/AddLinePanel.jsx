@@ -2,19 +2,30 @@
 // Exibe inputs para coordenadas X e Y e um botão para confirmar
 // Boas práticas: use estados locais para os inputs e valide os valores antes de adicionar
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-export default function AddLinePanel({ onAdd }) {
+export default function AddLinePanel({ onAdd, viewportCenter, zoom }) {
   // Limites centrados
   const MIN = -250;
   const MAX = 250;
-  const [x1, setX1] = useState(0);
-  const [y1, setY1] = useState(0);
-  const [x2, setX2] = useState(100);
-  const [y2, setY2] = useState(100);
+  // Calcula um deslocamento padrão proporcional ao zoom
+  const defaultOffset = 100 / zoom;
+  // Inicializa os inputs centralizados no viewport atual
+  const [x1, setX1] = useState(viewportCenter ? viewportCenter.x - defaultOffset / 2 : 0);
+  const [y1, setY1] = useState(viewportCenter ? viewportCenter.y - defaultOffset / 2 : 0);
+  const [x2, setX2] = useState(viewportCenter ? viewportCenter.x + defaultOffset / 2 : 100);
+  const [y2, setY2] = useState(viewportCenter ? viewportCenter.y + defaultOffset / 2 : 100);
   const [selectedPattern, setSelectedPattern] = useState(null);
   const clamp = (val) => Math.max(MIN, Math.min(MAX, Number(val)));
-  
+
+  // Sempre que viewportCenter ou zoom mudar, centraliza os inputs
+  useEffect(() => {
+    setX1(viewportCenter ? viewportCenter.x - defaultOffset / 2 : 0);
+    setY1(viewportCenter ? viewportCenter.y - defaultOffset / 2 : 0);
+    setX2(viewportCenter ? viewportCenter.x + defaultOffset / 2 : 100);
+    setY2(viewportCenter ? viewportCenter.y + defaultOffset / 2 : 100);
+  }, [viewportCenter, zoom]);
+
   // Handler para adicionar linha customizada pelos inputs
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -28,29 +39,25 @@ export default function AddLinePanel({ onAdd }) {
 
   // Função para obter as linhas de um padrão
   const getQuickPatternLines = (pattern) => {
-    const size = 250; // Tamanho base dos padrões (metade do canvas 500x500)
-    
+    // Tamanho base dos padrões proporcional ao zoom
+    const size = (250) / zoom; // metade do canvas lógico, ajustado pelo zoom
+    const cx = viewportCenter ? viewportCenter.x : 0;
+    const cy = viewportCenter ? viewportCenter.y : 0;
     switch (pattern) {
       case 'vertical':
-        return { x1: 0, y1: -size, x2: 0, y2: size };
-        
+        return { x1: cx, y1: cy - size, x2: cx, y2: cy + size };
       case 'horizontal':
-        return { x1: -size, y1: 0, x2: size, y2: 0 };
-        
+        return { x1: cx - size, y1: cy, x2: cx + size, y2: cy };
       case 'diagonal-principal':
-        return { x1: -size, y1: -size, x2: size, y2: size };
-      
+        return { x1: cx - size, y1: cy - size, x2: cx + size, y2: cy + size };
       case 'diagonal-secundaria':
-        return { x1: -size, y1: size, x2: size, y2: -size };
-      
+        return { x1: cx - size, y1: cy + size, x2: cx + size, y2: cy - size };
       case 'x':
-        return { x1: -size, y1: -size, x2: size, y2: size };
-        
+        return { x1: cx - size, y1: cy - size, x2: cx + size, y2: cy + size };
       case 'cruz':
-        return { x1: 0, y1: -size, x2: 0, y2: size };
-      
+        return { x1: cx, y1: cy - size, x2: cx, y2: cy + size };
       default:
-        return { x1: 0, y1: 0, x2: 100, y2: 100 };
+        return { x1: cx, y1: cy, x2: cx + 100 / zoom, y2: cy + 100 / zoom };
     }
   };
 
@@ -147,7 +154,7 @@ export default function AddLinePanel({ onAdd }) {
               onChange={e => setX1(Number(e.target.value))}
               style={{ width: '100%' }}
               onWheel={e => {
-                const step = 10;
+                const step = 5;
                 const dir = e.deltaY < 0 ? 1 : -1;
                 setX1(prev => clamp(Number(prev) + dir * step));
               }}
@@ -162,7 +169,7 @@ export default function AddLinePanel({ onAdd }) {
               onChange={e => setY1(Number(e.target.value))}
               style={{ width: '100%' }}
               onWheel={e => {
-                const step = 10;
+                const step = 5;
                 const dir = e.deltaY < 0 ? 1 : -1;
                 setY1(prev => clamp(Number(prev) + dir * step));
               }}
@@ -179,7 +186,7 @@ export default function AddLinePanel({ onAdd }) {
               onChange={e => setX2(Number(e.target.value))}
               style={{ width: '100%' }}
               onWheel={e => {
-                const step = 10;
+                const step = 5;
                 const dir = e.deltaY < 0 ? 1 : -1;
                 setX2(prev => clamp(Number(prev) + dir * step));
               }}
@@ -194,7 +201,7 @@ export default function AddLinePanel({ onAdd }) {
               onChange={e => setY2(Number(e.target.value))}
               style={{ width: '100%' }}
               onWheel={e => {
-                const step = 10;
+                const step = 5;
                 const dir = e.deltaY < 0 ? 1 : -1;
                 setY2(prev => clamp(Number(prev) + dir * step));
               }}

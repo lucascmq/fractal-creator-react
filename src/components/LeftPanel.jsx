@@ -15,7 +15,9 @@ export default function LeftPanel({
   onAddLine, 
   onAddShape, 
   settings = {}, 
-  onSettingsChange = () => {} 
+  onSettingsChange = () => {},
+  viewportCenter,
+  zoom
 }) {
   const [activeTab, setActiveTab] = useState('lines');
     // Ref para o container do painel
@@ -93,11 +95,11 @@ export default function LeftPanel({
         
         {/* Conteúdos das abas */}
         <div className={`editor-tab-content ${activeTab === 'lines' ? 'active' : ''}`}>
-          <AddLinePanel onAdd={handleAddLine} onCancel={() => {}} />
+          <AddLinePanel onAdd={handleAddLine} onCancel={() => {}} viewportCenter={viewportCenter} zoom={zoom} />
         </div>
         
         <div className={`editor-tab-content ${activeTab === 'shapes' ? 'active' : ''}`}>
-          <AddShapePanel onAdd={handleAddShape} onCancel={() => {}} />
+          <AddShapePanel onAdd={handleAddShape} onCancel={() => {}} viewportCenter={viewportCenter} zoom={zoom} />
         </div>        <div className={`editor-tab-content ${activeTab === 'config' ? 'active' : ''}`}>
           <ConfigPanel 
             settings={settings} 

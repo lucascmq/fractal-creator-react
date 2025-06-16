@@ -7,21 +7,22 @@ import LineNameEditor from './LineNameEditor';
 export default function RightPanel({ 
   lines, 
   shapes, 
-  groups = [], // Adiciona grupos como prop
+  groups = [],
   onUpdateLine, 
   onUpdateShape, 
   onDeleteLine, 
   onDeleteShape, 
   selectedShapeId, 
-  selectedElements = [], // Adiciona selectedElements como prop
-  onToggleElementSelection = () => {}, // Função para alternar seleção
-  onCreateGroup = () => {}, // Função para criar grupo
-  onDeleteGroup = () => {}, // Função para deletar grupo
-  onAddToGroup = () => {}, // Função para adicionar ao grupo
-  onRemoveFromGroup = () => {}, // Função para remover do grupo
-  onClearSelection = () => {}, // Função para limpar seleção
-  onRenameGroup, // Para renomear grupo
-  onRenameShape // Para renomear forma
+  selectedElements = [],
+  onToggleElementSelection = () => {},
+  onCreateGroup = () => {},
+  onDeleteGroup = () => {},
+  onAddToGroup = () => {},
+  onRemoveFromGroup = () => {},
+  onClearSelection = () => {},
+  onRenameGroup, 
+  onRenameShape,
+  settings // <--- Recebe settings como prop
 }) {
   // Estado local para o Auto Y de cada linha
   const [autoY, setAutoY] = useState({});
@@ -29,7 +30,13 @@ export default function RightPanel({
   const [showGroups, setShowGroups] = useState(true);
   // Estado para alternar entre modo Opacity e Dark
   const [opacityMode, setOpacityMode] = useState(true);
-  
+  // Estado local para Snap Grid de cada forma
+  const [snapGrid, setSnapGrid] = useState({});
+  // Handler para alternar Snap Grid
+  function toggleSnapGrid(id) {
+    setSnapGrid(prev => ({ ...prev, [id]: !prev[id] }));
+  }
+
   // Ref para o container do painel
   const asideRef = useRef(null);
     // Dar foco automático no painel quando há elementos suficientes para scroll
@@ -220,38 +227,42 @@ export default function RightPanel({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={labelStyle}>x1 =</span>
-            <input type="number" value={line.x1} min={-250} max={250} onChange={e => handleLineInput(line.id, 'x1', e.target.value, line)} style={inputStyle} 
+            <input type="number" step={25} value={line.x1} min={-250} max={250} onChange={e => handleLineInput(line.id, 'x1', e.target.value, line)} style={inputStyle} 
               onWheel={e => {
-                const step = 1;
+                e.preventDefault();
+                const step = 25;
                 const dir = e.deltaY < 0 ? 1 : -1;
-                handleLineInput(line.id, 'x1', Number(line.x1) + dir * step, line);
+                handleLineInput(line.id, 'x1', clamp(Number(line.x1) + dir * step, -250, 250), line);
               }} 
               onBlur={handleInputBlur} 
             />
             <span style={labelStyle}>y1 =</span>
-            <input type="number" value={line.y1} min={-250} max={250} onChange={e => handleLineInput(line.id, 'y1', e.target.value, line)} style={inputStyle} 
+            <input type="number" step={25} value={line.y1} min={-250} max={250} onChange={e => handleLineInput(line.id, 'y1', e.target.value, line)} style={inputStyle} 
               onWheel={e => {
-                const step = 1;
+                e.preventDefault();
+                const step = 25;
                 const dir = e.deltaY < 0 ? 1 : -1;
-                handleLineInput(line.id, 'y1', Number(line.y1) + dir * step, line);
+                handleLineInput(line.id, 'y1', clamp(Number(line.y1) + dir * step, -250, 250), line);
               }}
             />
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={labelStyle}>x2 =</span>
-            <input type="number" value={line.x2} min={-250} max={250} onChange={e => handleLineInput(line.id, 'x2', e.target.value, line)} style={inputStyle} 
+            <input type="number" step={25} value={line.x2} min={-250} max={250} onChange={e => handleLineInput(line.id, 'x2', e.target.value, line)} style={inputStyle} 
               onWheel={e => {
-                const step = 1;
+                e.preventDefault();
+                const step = 25;
                 const dir = e.deltaY < 0 ? 1 : -1;
-                handleLineInput(line.id, 'x2', Number(line.x2) + dir * step, line);
+                handleLineInput(line.id, 'x2', clamp(Number(line.x2) + dir * step, -250, 250), line);
               }}
             />
             <span style={labelStyle}>y2 =</span>
-            <input type="number" value={line.y2} min={-250} max={250} onChange={e => handleLineInput(line.id, 'y2', e.target.value, line)} style={inputStyle} 
+            <input type="number" step={25} value={line.y2} min={-250} max={250} onChange={e => handleLineInput(line.id, 'y2', e.target.value, line)} style={inputStyle} 
               onWheel={e => {
-                const step = 1;
+                e.preventDefault();
+                const step = 25;
                 const dir = e.deltaY < 0 ? 1 : -1;
-                handleLineInput(line.id, 'y2', Number(line.y2) + dir * step, line);
+                handleLineInput(line.id, 'y2', clamp(Number(line.y2) + dir * step, -250, 250), line);
               }}
             />
           </div>
@@ -297,18 +308,81 @@ export default function RightPanel({
             {/* Coluna 1 */}
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, alignItems: 'center' }}>
               <label style={{ ...labelStyle, marginBottom: 2 }}>X</label>
-              <input type="number" value={shape.x || 0} onChange={e => onUpdateShape(shape.id, { ...shape, x: Number(e.target.value) })} style={{ ...inputStyle, width: 38 }} onWheel={e => { e.stopPropagation(); }} onBlur={handleInputBlur} />
+              {/* Calcula o step do grid dinamicamente */}
+              {(() => {
+                const divisions = settings?.gridDivisions || 4;
+                const step = 500 / divisions;
+                return (
+                  <input type="number" step={snapGrid[shape.id] ? step : 1} value={shape.x} min={-250} max={250}
+                    onChange={e => {
+                      let v = Number(e.target.value);
+                      if (snapGrid[shape.id]) v = snapToGrid(v);
+                      onUpdateShape(shape.id, { ...shape, x: v });
+                    }}
+                    onWheel={e => {
+                      if (snapGrid[shape.id]) {
+                        e.preventDefault();
+                        const dir = e.deltaY < 0 ? 1 : -1;
+                        let v = Number(shape.x) + dir * step;
+                        v = snapToGrid(v);
+                        onUpdateShape(shape.id, { ...shape, x: v });
+                      }
+                    }}
+                    onBlur={e => {
+                      if (snapGrid[shape.id]) {
+                        let v = Number(e.target.value);
+                        v = snapToGrid(v);
+                        onUpdateShape(shape.id, { ...shape, x: v });
+                      }
+                    }}
+                    style={inputStyle}
+                  />
+                );
+              })()}
               <label style={{ ...labelStyle, margin: '8px 0 2px 0' }}>Escala</label>
               <input type="number" min="1" max="5" step="1" value={shape.scale || 1} onChange={e => onUpdateShape(shape.id, { ...shape, scale: Number(e.target.value) })} style={{ ...inputStyle, width: 38 }} onWheel={e => { e.stopPropagation(); }} />
             </div>
             {/* Coluna 2 */}
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, alignItems: 'center' }}>
               <label style={{ ...labelStyle, marginBottom: 2 }}>Y</label>
-              <input type="number" value={shape.y || 0} onChange={e => onUpdateShape(shape.id, { ...shape, y: Number(e.target.value) })} style={{ ...inputStyle, width: 38 }} onWheel={e => { e.stopPropagation(); }} />
+              {(() => {
+                const divisions = settings?.gridDivisions || 4;
+                const step = 500 / divisions;
+                return (
+                  <input type="number" step={snapGrid[shape.id] ? step : 1} value={shape.y} min={-250} max={250}
+                    onChange={e => {
+                      let v = Number(e.target.value);
+                      if (snapGrid[shape.id]) v = snapToGrid(v);
+                      onUpdateShape(shape.id, { ...shape, y: v });
+                    }}
+                    onWheel={e => {
+                      if (snapGrid[shape.id]) {
+                        e.preventDefault();
+                        const dir = e.deltaY < 0 ? 1 : -1;
+                        let v = Number(shape.y) + dir * step;
+                        v = snapToGrid(v);
+                        onUpdateShape(shape.id, { ...shape, y: v });
+                      }
+                    }}
+                    onBlur={e => {
+                      if (snapGrid[shape.id]) {
+                        let v = Number(e.target.value);
+                        v = snapToGrid(v);
+                        onUpdateShape(shape.id, { ...shape, y: v });
+                      }
+                    }}
+                    style={inputStyle}
+                  />
+                );
+              })()}
               <label style={{ ...labelStyle, margin: '8px 0 2px 0' }}>Girar</label>
               <input type="number" min="0" max="359" step="15" value={shape.rotation || 0} onChange={e => onUpdateShape(shape.id, { ...shape, rotation: Number(e.target.value) })} style={{ ...inputStyle, width: 38 }} onWheel={e => { e.stopPropagation(); }} />
             </div>
           </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 8px' }}>
+          <input type="checkbox" checked={!!snapGrid[shape.id]} onChange={() => toggleSnapGrid(shape.id)} />
+          <span style={{ color: '#7DF9A6', fontSize: 12 }}>Snap Grid</span>
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
           <button onClick={() => onDeleteShape(shape.id)} style={deleteBtnSmallStyle}>
@@ -407,209 +481,211 @@ export default function RightPanel({
     }
   };
 
+  // Função para snap ao grid
+  function snapToGrid(val) {
+    const divisions = settings?.gridDivisions || 4;
+    const step = 500 / divisions;
+    return Math.round(val / step) * step;
+  }
+
   return (
-    <aside ref={asideRef} style={{ 
-      ...panelStyle, 
-      opacity: showGroups ? 1 : 0.7, 
-      pointerEvents: showGroups ? 'auto' : 'none',
-      transition: 'opacity 0.3s, pointer-events 0.3s',
-      maxWidth: '96%', // Aumentado para 96%
-      margin: '0 auto',
-    }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        padding: '10px 12px',
-        borderBottom: '1px solid #4CC674',
-        maxWidth: '96%', // Aumentado para 96%
-        margin: '0 auto',
-      }}>
-        <h2 style={{ 
-          margin: 0, 
-          fontSize: 16, 
-          color: '#4CC674', 
-          fontWeight: 700,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-        }}>
-          <span style={{ fontSize: 18 }}>⚙️</span>
-          Painel de Controle
-        </h2>
-        <button onClick={() => setShowGroups(prev => !prev)} style={{
-          ...buttonStyle,
-          marginLeft: 8,
-          padding: '6px 12px',
-          fontSize: 14,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 4,
-        }}>
-          {showGroups ? 'Ocultar Grupos' : 'Mostrar Grupos'}
-          <span style={{ fontSize: 16, transform: showGroups ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.3s' }}>▼</span>
-        </button>
-      </div>
-      {showGroups && (
+    <aside ref={asideRef} className="fractal-aside right" tabIndex="0" style={{ outline: 'none', height: '100%', overflowY: 'auto', maxHeight: '85vh' }}>
+      <div className="editor-card" style={{ height: '100%', overflowY: 'auto', maxHeight: '85vh' }}>
         <div style={{ 
-          ...groupSectionStyle, 
-          maxHeight: showGroups ? 420 : 0,
-          opacity: showGroups ? 1 : 0,
-          overflow: 'hidden',
-          transition: 'max-height 0.3s ease-out, opacity 0.3s ease-out',
-          maxWidth: '96%',
-          margin: '10px 10px',
-          padding: '6px 6px', // Reduzido
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          padding: '10px 12px',
+          borderBottom: '1px solid #4CC674',
+          maxWidth: '96%', // Aumentado para 96%
+          margin: '0 auto',
         }}>
-          <div style={{ padding: '6px 8px', borderBottom: '1px solid #4CC674' }}>
-            <h3 style={{ 
-              margin: 0, 
-              fontSize: 18, 
-              color: '#4CC674', 
-              fontWeight: 700,
-            }}>
-              Grupos
-            </h3>
-          </div>
-          {/* Seção de grupos */}
-          <div className="grupos-scroll" style={{
-            padding: '6px 8px 24px', // Reduzido
+          <h2 style={{ 
+            margin: 0, 
+            fontSize: 16, 
+            color: '#4CC674', 
+            fontWeight: 700,
             display: 'flex',
-            flexDirection: 'column',
+            alignItems: 'center',
             gap: 8,
-            maxHeight: '400px',
-            overflowY: 'auto',
-            scrollbarWidth: 'none',
           }}>
-            {groups.length === 0 && (
-              <span style={{ color: '#fff', fontSize: 14, textAlign: 'center' }}>
-                Nenhum grupo criado ainda.
-              </span>
-            )}
-            {groups.map((group, idx) => (
-              <div key={group.id} style={{ 
-                ...groupItemStyle, 
-                backgroundColor: idx % 2 === 0 ? 'rgba(76, 198, 116, 0.1)' : undefined, // Usar só backgroundColor
-                borderColor: idx % 2 === 0 ? 'transparent' : '#4CC67433',
+            <span style={{ fontSize: 18 }}>⚙️</span>
+            Painel de Controle
+          </h2>
+          <button onClick={() => setShowGroups(prev => !prev)} style={{
+            ...buttonStyle,
+            marginLeft: 8,
+            padding: '6px 12px',
+            fontSize: 14,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+          }}>
+            {showGroups ? 'Ocultar Grupos' : 'Mostrar Grupos'}
+            <span style={{ fontSize: 16, transform: showGroups ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.3s' }}>▼</span>
+          </button>
+        </div>
+        {showGroups && (
+          <div style={{ 
+            ...groupSectionStyle, 
+            maxHeight: showGroups ? 420 : 0,
+            opacity: showGroups ? 1 : 0,
+            overflow: 'hidden',
+            transition: 'max-height 0.3s ease-out, opacity 0.3s ease-out',
+            maxWidth: '96%',
+            margin: '10px 10px',
+            padding: '6px 6px', // Reduzido
+          }}>
+            <div style={{ padding: '6px 8px', borderBottom: '1px solid #4CC674' }}>
+              <h3 style={{ 
+                margin: 0, 
+                fontSize: 18, 
+                color: '#4CC674', 
+                fontWeight: 700,
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', gap: 0 }}>
-                  <span style={{ 
-                    color: '#4CC674', 
-                    fontWeight: 700, 
-                    fontSize: 15,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                  }}>
-                    <span style={{ fontSize: 18 }}>👤</span>
-                    <GroupNameEditor name={group.name} onRename={newName => handleRenameGroup(group.id, newName)} />
-                  </span>
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <button onClick={() => handleDeleteGroup(group.id)} style={{
-                      ...deleteBtnSmallStyle,
-                      padding: '4px 8px',
-                      fontSize: 13,
-                      marginLeft: 8,
+                Grupos
+              </h3>
+            </div>
+            {/* Seção de grupos */}
+            <div className="grupos-scroll" style={{
+              padding: '6px 8px 24px', // Reduzido
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+              maxHeight: '400px',
+              overflowY: 'auto',
+              scrollbarWidth: 'none',
+            }}>
+              {groups.length === 0 && (
+                <span style={{ color: '#fff', fontSize: 14, textAlign: 'center' }}>
+                  Nenhum grupo criado ainda.
+                </span>
+              )}
+              {groups.map((group, idx) => (
+                <div key={group.id} style={{ 
+                  ...groupItemStyle, 
+                  backgroundColor: idx % 2 === 0 ? 'rgba(76, 198, 116, 0.1)' : undefined, // Usar só backgroundColor
+                  borderColor: idx % 2 === 0 ? 'transparent' : '#4CC67433',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', gap: 0 }}>
+                    <span style={{ 
+                      color: '#4CC674', 
+                      fontWeight: 700, 
+                      fontSize: 15,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
                     }}>
-                      <span role="img" aria-label="lixeira" style={{ marginRight: 2, fontSize: 14 }}>🗑️</span>
-                      Excluir
-                    </button>
-                    <button
-                      onClick={() => handleDuplicateGroup(group)}
-                      style={{
+                      <span style={{ fontSize: 18 }}>👤</span>
+                      <GroupNameEditor name={group.name} onRename={newName => handleRenameGroup(group.id, newName)} />
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <button onClick={() => handleDeleteGroup(group.id)} style={{
                         ...deleteBtnSmallStyle,
-                        background: 'rgba(76,198,116,0.18)',
-                        color: '#63B3ED',
+                        padding: '4px 8px',
+                        fontSize: 13,
                         marginLeft: 8,
+                      }}>
+                        <span role="img" aria-label="lixeira" style={{ marginRight: 2, fontSize: 14 }}>🗑️</span>
+                        Excluir
+                      </button>
+                      <button
+                        onClick={() => handleDuplicateGroup(group)}
+                        style={{
+                          ...deleteBtnSmallStyle,
+                          background: 'rgba(76,198,116,0.18)',
+                          color: '#63B3ED',
+                          marginLeft: 8,
+                        }}
+                        title="Duplicar grupo no centro (0,0)"
+                      >
+                        <span role="img" aria-label="duplicar" style={{ marginRight: 2, fontSize: 14 }}>📄</span>
+                        Duplicar
+                      </button>
+                    </div>
+                  </div>
+                  {/* NOVO: Controle de Rotação para o Grupo */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, justifyContent: 'center' }}>
+                    <label style={{ ...labelStyle, marginBottom: 0 }}>Rotação:</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="359"
+                      step="15"
+                      value={group.rotation || 0}
+                      onChange={e => onUpdateGroup(group.id, { rotation: Number(e.target.value) })}
+                      style={{ ...inputStyle, width: 60 }}
+                      onWheel={e => {
+                        e.stopPropagation();
+                        const step = 15;
+                        const dir = e.deltaY < 0 ? 1 : -1;
+                        onUpdateGroup(group.id, { rotation: (Number(group.rotation || 0) + dir * step + 360) % 360 });
                       }}
-                      title="Duplicar grupo no centro (0,0)"
-                    >
-                      <span role="img" aria-label="duplicar" style={{ marginRight: 2, fontSize: 14 }}>📄</span>
-                      Duplicar
-                    </button>
+                      onBlur={handleInputBlur}
+                    />
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'row',
+                    gap: '8px',
+                    marginTop: 8,
+                    overflowX: 'auto',
+                    overflowY: 'hidden',
+                    maxWidth: '100%'
+                    // justifyContent removido para alinhar à esquerda
+                  }}>
+                    {group.children.map(childId => {
+                      const line = lines.find(line => line.id === childId);
+                      if (line) return renderLine(line, 0);
+                      const shape = shapes.find(shape => shape.id === childId);
+                      if (shape) return renderShape(shape, 0);
+                      return null;
+                    })}
                   </div>
                 </div>
-                {/* NOVO: Controle de Rotação para o Grupo */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, justifyContent: 'center' }}>
-                  <label style={{ ...labelStyle, marginBottom: 0 }}>Rotação:</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="359"
-                    step="15"
-                    value={group.rotation || 0}
-                    onChange={e => onUpdateGroup(group.id, { rotation: Number(e.target.value) })}
-                    style={{ ...inputStyle, width: 60 }}
-                    onWheel={e => {
-                      e.stopPropagation();
-                      const step = 15;
-                      const dir = e.deltaY < 0 ? 1 : -1;
-                      onUpdateGroup(group.id, { rotation: (Number(group.rotation || 0) + dir * step + 360) % 360 });
-                    }}
-                    onBlur={handleInputBlur}
-                  />
-                </div>
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'row',
-                  gap: '8px',
-                  marginTop: 8,
-                  overflowX: 'auto',
-                  overflowY: 'hidden',
-                  maxWidth: '100%'
-                  // justifyContent removido para alinhar à esquerda
-                }}>
-                  {group.children.map(childId => {
-                    const line = lines.find(line => line.id === childId);
-                    if (line) return renderLine(line, 0);
-                    const shape = shapes.find(shape => shape.id === childId);
-                    if (shape) return renderShape(shape, 0);
-                    return null;
-                  })}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
+        )}
+        {/* Botão de criar grupo sempre visível, fora da div de grupos */}
+        <div style={{ padding: '10px 12px' }}>
+          <button 
+            onClick={handleCreateGroupFromSelection}
+            disabled={selectableElements.length === 0}
+            style={{ 
+              width: '100%', 
+              padding: '8px', 
+              backgroundColor: selectableElements.length ? '#4CC674' : '#333',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: selectableElements.length ? 'pointer' : 'not-allowed',
+              marginTop: '8px',
+              opacity: selectableElements.length ? 1 : 0.7
+            }}
+          >
+            Criar Grupo {selectableElements.length > 0 ? `(${selectableElements.length} selecionados)` : '(Selecione elementos)'}
+          </button>
         </div>
-      )}
-      {/* Botão de criar grupo sempre visível, fora da div de grupos */}
-      <div style={{ padding: '10px 12px' }}>
-        <button 
-          onClick={handleCreateGroupFromSelection}
-          disabled={selectableElements.length === 0}
-          style={{ 
-            width: '100%', 
-            padding: '8px', 
-            backgroundColor: selectableElements.length ? '#4CC674' : '#333',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: selectableElements.length ? 'pointer' : 'not-allowed',
-            marginTop: '8px',
-            opacity: selectableElements.length ? 1 : 0.7
-          }}
-        >
-          Criar Grupo {selectableElements.length > 0 ? `(${selectableElements.length} selecionados)` : '(Selecione elementos)'}
-        </button>
-      </div>
-      <div style={{ 
-        padding: '10px 12px', 
-        display: 'flex', 
-        flexDirection: 'column', 
-        gap: 8 
-      }}>
-      </div>
-      {/* Linhas não agrupadas */}
-      <div>
-        <h4 style={{ color: '#7DF9A6', marginBottom: 8 }}>Linhas</h4>
-        {ungroupedLines.length === 0 && <p style={{ color: '#888' }}>Nenhuma linha criada.</p>}
-        {ungroupedLines.map(renderLine)}
-      </div>
-      {/* Formas não agrupadas */}
-      <div>
-        <h4 style={{ color: '#7DF9A6', marginBottom: 8 }}>Formas</h4>
-        {ungroupedShapes.length === 0 && <p style={{ color: '#888' }}>Nenhuma forma criada.</p>}
-        {ungroupedShapes.map(renderShape)}
+        <div style={{ 
+          padding: '10px 12px', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: 8 
+        }}>
+        </div>
+        {/* Linhas não agrupadas */}
+        <div>
+          <h4 style={{ color: '#7DF9A6', marginBottom: 8 }}>Linhas</h4>
+          {ungroupedLines.length === 0 && <p style={{ color: '#888' }}>Nenhuma linha criada.</p>}
+          {ungroupedLines.map(renderLine)}
+        </div>
+        {/* Formas não agrupadas */}
+        <div>
+          <h4 style={{ color: '#7DF9A6', marginBottom: 8 }}>Formas</h4>
+          {ungroupedShapes.length === 0 && <p style={{ color: '#888' }}>Nenhuma forma criada.</p>}
+          {ungroupedShapes.map(renderShape)}
+        </div>
       </div>
     </aside>
   );
@@ -723,9 +799,13 @@ const groupItemStyle = {
 
 
 
-
 //    col 1               col 2
 //   x    = (input)     y = (input)
 // escala = (input)
 
 // desfazer
+
+// Utilitário para clamp (igual ao LeftPanel)
+function clamp(val, min, max) {
+  return Math.max(min, Math.min(max, val));
+}
